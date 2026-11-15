@@ -6,12 +6,28 @@ import { DesktopUpdateChannelSchema, DesktopUpdateStateSchema } from "./ipc.ts";
 
 export const RESOURCE_MONITOR_PROTOCOL_VERSION = 3 as const;
 
+const UnitInterval = Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 }));
+
+/** The model L3 serves through Ollama, and how fast it is generating. */
+export const LocalModelStats = Schema.Struct({
+  name: TrimmedNonEmptyString,
+  /** Weights and cache Ollama holds for the loaded model; null while unloaded. */
+  memoryBytes: Schema.NullOr(NonNegativeInt),
+  generating: Schema.Boolean,
+  /** Live rate while generating, otherwise the last finished response's rate. */
+  tokensPerSecond: Schema.NullOr(Schema.Number.check(Schema.isGreaterThanOrEqualTo(0))),
+});
+export type LocalModelStats = typeof LocalModelStats.Type;
+
 export const HostResourcesSnapshot = Schema.Struct({
   sampledAt: NonNegativeInt,
-  cpuUtilization: Schema.NullOr(Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 }))),
+  cpuUtilization: Schema.NullOr(UnitInterval),
   cpuCount: NonNegativeInt,
   availableMemoryBytes: NonNegativeInt,
   totalMemoryBytes: NonNegativeInt,
+  // Optional so older servers and clients still decode each other's snapshots.
+  gpuUtilization: Schema.optional(Schema.NullOr(UnitInterval)),
+  localModel: Schema.optional(Schema.NullOr(LocalModelStats)),
 });
 export type HostResourcesSnapshot = typeof HostResourcesSnapshot.Type;
 

@@ -95,7 +95,7 @@ const sendJson = Effect.fn("TextGenerator.sendJson")(function* <S extends Schema
     Effect.mapError(
       (cause) =>
         new TextGeneratorRequestError({
-          detail: `${label} returned a reply T3 Code couldn't read.`,
+          detail: `${label} returned a reply L3 couldn't read.`,
           cause,
         }),
     ),
@@ -135,12 +135,26 @@ const OpenAIModelList = Schema.Struct({
   data: Schema.Array(Schema.Struct({ id: Schema.String, name: Schema.optional(Schema.String) })),
 });
 
+const isLoopbackUrl = (value: string) => {
+  try {
+    const { hostname } = new URL(value);
+    return hostname === "localhost" || hostname === "[::1]" || hostname.startsWith("127.");
+  } catch {
+    return false;
+  }
+};
+
 const openAICompatible: TextGeneratorDriver = {
   kind: "openaiCompatible",
   generate: (connection, model, prompt) => {
     const { label } = connection;
     let request = HttpClientRequest.post(endpoint(connection, "/chat/completions")).pipe(
-      HttpClientRequest.bodyJsonUnsafe({ model, messages: [{ role: "user", content: prompt }] }),
+      HttpClientRequest.bodyJsonUnsafe({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        // Local thinking models (L3's Ollama) spend seconds reasoning about a title otherwise.
+        ...(isLoopbackUrl(connection.baseUrl) ? { reasoning_effort: "none" } : {}),
+      }),
     );
     if (connection.apiKey) request = HttpClientRequest.bearerToken(request, connection.apiKey);
     return sendJson(label, request, ChatCompletion).pipe(

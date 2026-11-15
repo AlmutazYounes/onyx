@@ -1,3 +1,60 @@
+# L3
+
+**L3 is T3 Code rewired to run entirely on a local model.** No subscriptions, no API keys, and
+your prompts and code stay on your Mac.
+
+T3 Code is only a control panel, so it needs a coding agent to do the work. L3 ships preconfigured
+with [OpenCode](https://opencode.ai) as that agent. OpenCode talks to a model served by
+[Ollama](https://ollama.com) on `127.0.0.1:11434`.
+
+| Piece           | What L3 uses                                                                                                           |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Model           | Qwen 3.6 35B-A3B, Unsloth `UD-IQ3_S` GGUF (13.7 GB, MoE, ~3B active per token), wrapped as `l3-coder` with 64K context |
+| Model server    | Ollama (Metal), started as a login service                                                                             |
+| Agent / harness | OpenCode 2 with its own database (`~/.l3/opencode`), limited to the local `l3` provider                                |
+| Titles, commits | Text generator `l3-local` → the same Ollama endpoint                                                                   |
+| Data directory  | `~/.l3` (kept apart from any T3 Code install in `~/.t3`)                                                               |
+| Telemetry       | Off by default (`T3CODE_TELEMETRY_ENABLED=true` turns it back on)                                                      |
+| Auto-update     | Off (desktop updater and `t3` self-update), so T3 Code releases can't replace L3                                       |
+
+The model is sized for a 32 GB Apple Silicon Mac that also runs a browser, an editor and chat apps.
+The 4-bit build (`qwen3.6:35b-a3b`, 23 GB) fits on paper, but in practice it pushed the Mac into swap.
+The 3-bit build leaves about 10 GB free for everything else. The mixture-of-experts design keeps it
+fast, because only about 3B parameters run per token. To try another GGUF, point `L3_GGUF_URL` at
+it and run `L3_RECREATE=1 scripts/l3-setup.sh`. On a Mac with 48 GB or more, the 4-bit
+`Qwen3.6-35B-A3B-UD-Q4_K_M.gguf` from the same Unsloth repository is a step up.
+
+Measured on an M6 Mac mini with 32 GB: about 53 tokens/s generation, about 970 tokens/s prompt
+reading (an agent's first turn waits about 10 s for its system prompt), 100% on the GPU, no swap growth.
+
+The thread details panel (right side, under the machine name) shows live CPU, RAM and GPU load and
+the model's tokens per second. L3 measures speed with a small loopback proxy between OpenCode and
+Ollama.
+
+## Use L3
+
+```bash
+scripts/l3-setup.sh   # once: Ollama, OpenCode, Node, the model, and dependencies
+scripts/l3            # build if needed, then start L3 and open it in the browser
+```
+
+L3 listens on port 3873, so it can run beside T3 Code (3773). Run either the desktop app or
+`scripts/l3`, not both: they share `~/.l3` and its port.
+
+### Desktop app
+
+```bash
+RUSTUP_TOOLCHAIN=1.95 PATH="$PWD/node_modules/.bin:$PATH" \
+  node scripts/build-desktop-artifact.ts --platform mac --target dmg --arch arm64
+```
+
+This writes `release/L3-<version>-arm64.dmg`. The build is unsigned, so the first time you open
+L3.app, right-click it and choose **Open**.
+
+Codex and Claude are still available under **Settings → Providers** if you want to turn them on.
+
+---
+
 <p align="center">
   <a href="https://t3.codes">
     <img src="./assets/prod/t3-black-web-icon-192x192.png" width="80" height="80" alt="T3 Code logo" />

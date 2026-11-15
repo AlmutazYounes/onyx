@@ -1060,9 +1060,7 @@ describe("synchronized model preferences", () => {
 describe("resolveSpeechPostProcessingModelSelection", () => {
   it("follows the text generation model until a usable cleanup model is set", () => {
     const textGeneration = createModelSelection(ProviderInstanceId.make("codex"), "gpt-6-luna");
-    const cleanup = createModelSelection(ProviderInstanceId.make("claudeAgent"), "claude-haiku", [
-      { id: "effort", value: "low" },
-    ]);
+    const cleanup = createModelSelection(ProviderInstanceId.make("opencode"), "l3/l3-coder");
     const base = { ...DEFAULT_SERVER_SETTINGS, textGenerationModelSelection: textGeneration };
     expect(resolveSpeechPostProcessingModelSelection(base)).toBe(textGeneration);
     const pinned = applyServerSettingsPatch(base, { speechPostProcessingModelSelection: cleanup });
@@ -1071,8 +1069,8 @@ describe("resolveSpeechPostProcessingModelSelection", () => {
       resolveSpeechPostProcessingModelSelection({
         ...pinned,
         providerInstances: {
-          [ProviderInstanceId.make("claudeAgent")]: {
-            driver: ProviderDriverKind.make("claudeAgent"),
+          [ProviderInstanceId.make("opencode")]: {
+            driver: ProviderDriverKind.make("opencode"),
             enabled: false,
             config: {},
           },
@@ -1082,7 +1080,7 @@ describe("resolveSpeechPostProcessingModelSelection", () => {
     expect(
       resolveSpeechPostProcessingModelSelection(pinned, [
         {
-          instanceId: "claudeAgent",
+          instanceId: "opencode",
           enabled: true,
           installed: true,
           supportsTextGeneration: false,

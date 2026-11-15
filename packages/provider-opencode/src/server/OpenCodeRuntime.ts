@@ -1,7 +1,11 @@
 import { resolveProviderProbeTimeoutMs } from "@t3tools/provider-core/server/snapshotProbe";
 import * as NodeURL from "node:url";
 
-import type { ChatAttachment, ProviderApprovalDecision } from "@t3tools/contracts";
+import {
+  L3_OPENCODE_CONFIG_CONTENT,
+  type ChatAttachment,
+  type ProviderApprovalDecision,
+} from "@t3tools/contracts";
 import {
   createOpencodeClient,
   type Agent,
@@ -40,7 +44,6 @@ import * as HostProcess from "@t3tools/shared/HostProcess";
 import { compareSemverVersions, parseSemver } from "@t3tools/shared/semver";
 import { resolveSpawnCommand } from "@t3tools/shared/shell";
 const encodeUnknownJsonStringExit = Schema.encodeUnknownExit(Schema.fromJsonString(Schema.Unknown));
-const OPENCODE_EMPTY_CONFIG_CONTENT = "{}";
 
 export const MINIMUM_OPENCODE_VERSION = "1.14.19";
 const OPENCODE_HEALTH_TIMEOUT_MS = 5_000;
@@ -58,7 +61,7 @@ function resolveOpenCodeConfigContent(
   return (
     inputEnvironment?.OPENCODE_CONFIG_CONTENT ??
     inheritedEnvironment.OPENCODE_CONFIG_CONTENT ??
-    OPENCODE_EMPTY_CONFIG_CONTENT
+    L3_OPENCODE_CONFIG_CONTENT
   );
 }
 

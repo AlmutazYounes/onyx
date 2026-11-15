@@ -22,6 +22,7 @@ import ProjectScriptsControl, {
 import { memo, useState, type ComponentProps } from "react";
 import { ThreadDetailsCard } from "./ThreadDetailsCard";
 import { OpenInPicker } from "./OpenInPicker";
+import { ThreadDetailsMachineStats } from "./ThreadDetailsMachineStats";
 import { ThreadDetailsSection } from "./ThreadDetailsSection";
 import { ThreadAutomationsPanel } from "./ThreadAutomationsPanel";
 import { ThreadRelationshipsPanel } from "./ThreadRelationshipsControl";
@@ -200,6 +201,10 @@ export function ThreadDetailsPanel(props: ThreadDetailsPanelProps) {
                         onAutoEnvironment={props.onAutoEnvironment}
                         {...branchToolbarProps}
                       />
+                    ) : null}
+
+                    {show.environment ? (
+                      <ThreadDetailsMachineStats environmentId={props.environmentId} />
                     ) : null}
 
                     {show.openIn ? (

@@ -6,6 +6,7 @@ import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as PlatformError from "effect/PlatformError";
+import { FetchHttpClient } from "effect/http";
 import { ChildProcessSpawner } from "effect/process";
 import * as TestClock from "effect/testing/TestClock";
 import { vi } from "vite-plus/test";
@@ -79,6 +80,13 @@ const linuxHost = (files: Record<string, ReadonlyArray<string>>) => {
           ChildProcessSpawner.ChildProcessSpawner,
           ChildProcessSpawner.make(() => Effect.die("HostResources spawned on linux")),
         ),
+        // No Ollama in tests: the local model reads as absent.
+        FetchHttpClient.layer.pipe(
+          Layer.provide(
+            Layer.succeed(FetchHttpClient.Fetch, (() =>
+              Promise.reject(new Error("no Ollama"))) as typeof fetch),
+          ),
+        ),
       ),
     ),
   );
@@ -100,6 +108,8 @@ describe("HostResources.layer", () => {
       // One CPU of quota, 150 ms of it used during the 200 ms sample.
       assert.strictEqual(snapshot.cpuCount, 1);
       assert.strictEqual(snapshot.cpuUtilization, 0.75);
+      assert.strictEqual(snapshot.gpuUtilization, null);
+      assert.strictEqual(snapshot.localModel, null);
     }).pipe(
       Effect.provide(
         linuxHost({

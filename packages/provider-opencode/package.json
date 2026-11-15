@@ -42,6 +42,10 @@
     "./server/v2/textGeneration": {
       "types": "./src/server/v2/textGeneration.ts",
       "import": "./src/server/v2/textGeneration.ts"
+    },
+    "./server/L3ModelMeter": {
+      "types": "./src/server/L3ModelMeter.ts",
+      "import": "./src/server/L3ModelMeter.ts"
     }
   },
   "scripts": {

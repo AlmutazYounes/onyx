@@ -2,6 +2,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
 import type { ManagedPolicyDocument } from "@t3tools/contracts";
 import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as ConfigProvider from "effect/ConfigProvider";
 import * as Deferred from "effect/Deferred";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -25,6 +26,8 @@ import * as ServerSelfUpdate from "./selfUpdate.ts";
 
 interface HarnessOptions {
   readonly mode?: "web" | "desktop";
+  /** L3 refuses upstream releases unless allowed; the update flow tests opt in. */
+  readonly allowUpstreamUpdates?: boolean;
   readonly managed?: boolean;
   readonly launcherProtocol?: 3 | typeof SERVICE_LAUNCHER_PROTOCOL;
   readonly preflight?: "ready" | "blocked";
@@ -167,9 +170,17 @@ const makeHarness = Effect.fn("test.make_self_update_harness")(function* (
     Effect.provideService(HostProcess.Platform, "linux"),
     Effect.provideService(HostProcess.Architecture, "x64"),
     Effect.provide(
-      Layer.merge(
+      Layer.mergeAll(
         ServerConfig.layer({ ...config, mode: options.mode ?? "web" }),
         ManagedPolicy.layerTest(options.policy),
+        ConfigProvider.layer(
+          ConfigProvider.fromEnv({
+            env: {
+              ...process.env,
+              L3_ALLOW_UPSTREAM_UPDATES: String(options.allowUpstreamUpdates ?? true),
+            },
+          }),
+        ),
       ),
     ),
   );
@@ -241,6 +252,19 @@ it.layer(NodeServices.layer)("server self update", (it) => {
   );
 
   // regression: #5181 make remote updates rollback-safe
+  it.effect("refuses upstream T3 Code releases unless L3 allows them", () =>
+    Effect.gen(function* () {
+      const service = yield* makeHarness({ allowUpstreamUpdates: false });
+      const desktop = yield* makeHarness({ mode: "desktop", allowUpstreamUpdates: false });
+      for (const harness of [service, desktop]) {
+        expect(
+          (yield* harness.selfUpdate.update({ targetVersion: "1.1.0" }).pipe(Effect.flip)).reason,
+        ).toContain("L3 does not install T3 Code releases");
+      }
+      expect([...service.order, ...desktop.order]).toEqual([]);
+    }),
+  );
+
   it.effect("rejects invalid versions and desktop-managed servers before staging", () =>
     Effect.gen(function* () {
       const web = yield* makeHarness();
@@ -481,7 +505,7 @@ it.layer(NodeServices.layer)("pruning runtimes on start", (it) => {
       if (input.servicePlistThroughLink) yield* fs.symlink(realHome, programHome);
       const program = path.join(programHome, "runtime", "versions", input.servicePlistStarts, "t3");
       yield* fs.writeFileString(
-        path.join(agentsDir, "com.t3tools.t3code.service.plist"),
+        path.join(agentsDir, "com.l3.localeditor.service.plist"),
         `<plist><dict>\n<key>ProgramArguments</key>\n<array>\n<string>${program}</string>\n<string>__service-launcher</string>\n</array>\n</dict></plist>\n`,
       );
     }

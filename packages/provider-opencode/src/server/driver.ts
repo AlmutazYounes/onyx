@@ -1,5 +1,8 @@
 import { resolveProviderProbeTimeoutMs } from "@t3tools/provider-core/server/snapshotProbe";
 import {
+  L3_OLLAMA_BASE_URL,
+  L3_OPENCODE_CONFIG_CONTENT,
+  makeL3OpenCodeConfigContent,
   ProviderDriverKind,
   settingsSecretLiteral,
   type ServerProviderModel,
@@ -57,6 +60,7 @@ import {
   type ProbedOpenCode,
 } from "./versionProbe.ts";
 import * as OpenCodeServerOwner from "./OpenCodeServerOwner.ts";
+import { ensureL3ModelProxy } from "./L3ModelMeter.ts";
 import * as OpenCode2Client from "./v2/OpenCode2Client.ts";
 import * as OpenCode2Server from "./v2/OpenCode2Server.ts";
 import { replaceOutdatedService } from "./v2/OpenCode2Service.ts";
@@ -81,6 +85,35 @@ import {
   makeProviderSnapshotSettingsSource,
   type ProviderSnapshotSettings,
 } from "@t3tools/provider-core/server/snapshotSettings";
+
+const L3_HOMEBREW_OPENCODE = "/opt/homebrew/bin/opencode";
+
+/**
+ * Gives L3's OpenCode its own database and keeps it on the local model. OpenCode 2 converts
+ * `~/.local/share/opencode/opencode.db` in place, which a separately installed OpenCode 1.x can't
+ * share. `OPENCODE_DB` moves only the database, unlike `XDG_DATA_HOME`, which the agent's own
+ * commands would inherit. `L3_OPENCODE_SHARED_DATA=1` opts back into the shared database.
+ */
+const withL3OpenCodeIsolation = (
+  env: NodeJS.ProcessEnv,
+  modelBaseUrl: string | null,
+): NodeJS.ProcessEnv => {
+  const isolate = env.HOME !== undefined && env.L3_OPENCODE_SHARED_DATA !== "1";
+  return {
+    ...env,
+    ...(isolate && env.OPENCODE_DB === undefined
+      ? { OPENCODE_DB: `${env.HOME}/.l3/opencode/opencode.db` }
+      : {}),
+    OPENCODE_CONFIG_CONTENT:
+      env.OPENCODE_CONFIG_CONTENT ??
+      (modelBaseUrl ? makeL3OpenCodeConfigContent(modelBaseUrl) : L3_OPENCODE_CONFIG_CONTENT),
+    OPENCODE_DISABLE_AUTOUPDATE: env.OPENCODE_DISABLE_AUTOUPDATE ?? "1",
+    OPENCODE_DISABLE_FREE_MODELS: env.OPENCODE_DISABLE_FREE_MODELS ?? "1",
+    // The models.dev catalog describes hosted models; L3's one model is defined inline.
+    OPENCODE_DISABLE_MODELS_FETCH: env.OPENCODE_DISABLE_MODELS_FETCH ?? "1",
+  };
+};
+
 const decodeOpenCodeSettings = Schema.decodeSync(OpenCodeSettings);
 
 const DRIVER_KIND = ProviderDriverKind.make("opencode");
@@ -276,7 +309,12 @@ export const OpenCodeDriver: ProviderDriver<
     const latestVersions = yield* ProviderLatestVersions.ProviderLatestVersions;
     const digest = yield* Digest.Digest;
     const host = yield* ProviderHost.ProviderHost;
-    const processEnv = yield* mergeProviderInstanceEnvironment(environment);
+    // Started before OpenCode so every request it makes is metered for the details panel.
+    const modelBaseUrl = yield* Effect.promise(() => ensureL3ModelProxy(L3_OLLAMA_BASE_URL));
+    const processEnv = withL3OpenCodeIsolation(
+      yield* mergeProviderInstanceEnvironment(environment),
+      modelBaseUrl,
+    );
     const continuationIdentity = defaultProviderContinuationIdentity({
       driverKind: DRIVER_KIND,
       instanceId,
@@ -288,10 +326,20 @@ export const OpenCodeDriver: ProviderDriver<
       accentColor,
       continuationGroupKey: continuationIdentity.continuationKey,
     });
+    const configuredBinaryPath = expandHomePath(
+      config.binaryPath,
+      yield* HostProcess.HomeDirectory,
+    );
+    // L3 setup installs OpenCode 2 with Homebrew; prefer it over an older `opencode` earlier on PATH.
+    const binaryPath =
+      configuredBinaryPath === "opencode" &&
+      (yield* fileSystem.exists(L3_HOMEBREW_OPENCODE).pipe(Effect.orElseSucceed(() => false)))
+        ? L3_HOMEBREW_OPENCODE
+        : configuredBinaryPath;
     const effectiveConfig = {
       ...config,
       enabled,
-      binaryPath: expandHomePath(config.binaryPath, yield* HostProcess.HomeDirectory),
+      binaryPath,
       // The instance registry has already read a referenced password from its secret provider.
       serverPassword: settingsSecretLiteral(config.serverPassword),
     } satisfies OpenCodeSettings;

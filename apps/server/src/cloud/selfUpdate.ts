@@ -155,6 +155,10 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
   const releaseBaseUrl =
     mirror?.feedUrl ??
     Option.getOrUndefined(yield* Config.String(CLI_RELEASE_BASE_URL_ENV).pipe(Config.option));
+  // Published `t3` releases are upstream T3 Code; installing one would replace L3.
+  const allowUpstreamUpdates = yield* Config.Boolean("L3_ALLOW_UPSTREAM_UPDATES").pipe(
+    Config.withDefault(false),
+  );
   const inFlight = yield* Ref.make(false);
 
   yield* pruneRuntimesOnStart({ baseDir: serverConfig.baseDir, managed: launcher.managed }).pipe(
@@ -186,6 +190,11 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
     if (policyRefusal !== undefined) {
       return yield* failWith(policyRefusal);
     }
+    if (!allowUpstreamUpdates) {
+      return yield* failWith(
+        "L3 does not install T3 Code releases. Update L3 from its source checkout and rebuild.",
+      );
+    }
     if (capability === "desktop-managed") {
       const unsafeCrossing = input.channel === undefined ? null : crossesTrackUnsafely(input);
       if (unsafeCrossing !== null) return yield* failWith(unsafeCrossing);
@@ -198,14 +207,14 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
         );
       }
       return yield* failWith(
-        "This server is managed by the T3 Code desktop app on its machine; update the desktop app to update it.",
+        "This server is managed by the L3 desktop app on its machine; update the desktop app to update it.",
       );
     }
     // The target must accept the launcher that will run it, which can be older than this server.
     const launcherProtocol = launcher.protocol;
     if (capability === null || launcherProtocol === undefined) {
       return yield* failWith(
-        "Remote updates require the T3 Code background service. Run `t3 service install` on the server machine.",
+        "Remote updates require the L3 background service. Run `t3 service install` on the server machine.",
       );
     }
 

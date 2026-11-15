@@ -1,5 +1,11 @@
 import * as NodeOS from "node:os";
-import type { HostResourcesSnapshot } from "@t3tools/contracts";
+import {
+  L3_LOCAL_MODEL,
+  L3_OLLAMA_BASE_URL,
+  type HostResourcesSnapshot,
+  type LocalModelStats,
+} from "@t3tools/contracts";
+import { readL3ModelRate } from "@t3tools/provider-opencode/server/L3ModelMeter";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as Cache from "effect/Cache";
 import * as Clock from "effect/Clock";
@@ -8,6 +14,8 @@ import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
+import * as Schema from "effect/Schema";
+import { HttpClient, HttpClientRequest } from "effect/http";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 export class HostResources extends Context.Service<
@@ -70,10 +78,66 @@ function cgroupNumber(text: string, pattern: RegExp): number | null {
   return value === undefined ? null : Number(value);
 }
 
+// Apple GPUs report utilization through IOAccelerator without elevated privileges.
+function darwinGpuUtilization(ioreg: string): number | null {
+  const percent = /"Device Utilization %"=(\d+)/.exec(ioreg)?.[1];
+  return percent === undefined ? null : Math.min(1, Math.max(0, Number(percent) / 100));
+}
+
+const OllamaRunningModels = Schema.Struct({
+  models: Schema.Array(
+    Schema.Struct({ name: Schema.String, size_vram: Schema.optional(Schema.Number) }),
+  ),
+});
+const decodeOllamaRunningModels = Schema.decodeUnknownEffect(OllamaRunningModels);
+const OLLAMA_PS_URL = new URL("/api/ps", L3_OLLAMA_BASE_URL).toString();
+
 const make = Effect.fn("makeHostResources")(function* () {
   const fs = yield* FileSystem.FileSystem;
   const platform = yield* HostProcess.Platform;
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+  const http = yield* HttpClient.HttpClient;
+
+  const readGpu = () =>
+    platform === "darwin"
+      ? spawner
+          .string(
+            ChildProcess.make(
+              "/usr/sbin/ioreg",
+              ["-r", "-d", "1", "-w", "0", "-c", "IOAccelerator"],
+              {
+                stdin: "ignore",
+                stderr: "ignore",
+              },
+            ),
+          )
+          .pipe(
+            Effect.timeout("1 second"),
+            Effect.map(darwinGpuUtilization),
+            Effect.orElseSucceed(() => null),
+          )
+      : Effect.succeed(null);
+
+  const readLocalModel = Effect.fn("HostResources.readLocalModel")(function* () {
+    const running = yield* http.execute(HttpClientRequest.get(OLLAMA_PS_URL)).pipe(
+      Effect.flatMap((response) => response.json),
+      Effect.flatMap(decodeOllamaRunningModels),
+      Effect.timeout("1 second"),
+      Effect.option,
+    );
+    // Ollama not running: nothing to show.
+    if (running._tag === "None") return null;
+    const loaded = running.value.models.find(
+      (model) => model.name === L3_LOCAL_MODEL || model.name.startsWith(`${L3_LOCAL_MODEL}:`),
+    );
+    const rate = readL3ModelRate(DateTime.toEpochMillis(yield* DateTime.now));
+    return {
+      name: L3_LOCAL_MODEL,
+      memoryBytes: loaded?.size_vram === undefined ? null : Math.round(loaded.size_vram),
+      generating: rate.generating,
+      tokensPerSecond: rate.tokensPerSecond,
+    } satisfies LocalModelStats;
+  });
 
   const readFile = (path: string) => fs.readFileString(path).pipe(Effect.orElseSucceed(() => ""));
 
@@ -178,13 +242,16 @@ const make = Effect.fn("makeHostResources")(function* () {
       cpuCount,
       availableMemoryBytes: Math.min(totalMemoryBytes, Math.max(0, availableMemoryBytes)),
       totalMemoryBytes,
+      gpuUtilization: yield* readGpu(),
+      localModel: yield* readLocalModel(),
     };
   });
 
   const cache = yield* Cache.make({
     capacity: 1,
     lookup: (_key: "host") => sample(),
-    timeToLive: "5 seconds",
+    // Short enough for the details panel's live tokens-per-second readout.
+    timeToLive: "1500 millis",
   });
   return HostResources.of({ read: Cache.get(cache, "host") });
 });

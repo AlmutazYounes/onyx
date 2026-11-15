@@ -64,6 +64,7 @@ it.effect.each([
       const body = JSON.parse(String(init?.body));
       expect(body.model).toBe("some/model");
       expect(body.messages).toEqual([{ role: "user", content: "Name this thread." }]);
+      expect(body.reasoning_effort).toBeUndefined();
       return Response.json(api.reply);
     });
     const generators = yield* TextGenerators.TextGenerators.pipe(
@@ -84,6 +85,24 @@ it.effect.each([
       run!(request).pipe(Effect.provideService(FetchHttpClient.Fetch, upstream)),
     );
     expect(failure.detail).toMatch(/rejected the API key: Incorrect API key provided$/);
+  }),
+);
+
+it.effect("an OpenAI-compatible generator on loopback turns thinking off", () =>
+  Effect.gen(function* () {
+    const bodies: Array<Record<string, unknown>> = [];
+    const upstream = vi.fn<typeof fetch>(async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return Response.json({
+        choices: [{ finish_reason: "stop", message: { content: '{"title":"Fix login"}' } }],
+      });
+    });
+    const generators = yield* TextGenerators.TextGenerators.pipe(
+      Effect.provide(layer({ baseUrl: "http://127.0.0.1:11434/v1" })),
+    );
+    const run = yield* generators.runner(ID);
+    yield* run!(request).pipe(Effect.provideService(FetchHttpClient.Fetch, upstream));
+    expect(bodies[0]?.reasoning_effort).toBe("none");
   }),
 );
 

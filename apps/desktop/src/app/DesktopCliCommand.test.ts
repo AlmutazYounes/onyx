@@ -109,8 +109,9 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
         onPath: false,
         launcherPath: null,
       });
+      // L3 leaves `t3` to T3 Code: first launch installs nothing; Settings still can.
       yield* command.installOnFirstLaunch;
-      expect((yield* command.state).installedPath).toBe(link);
+      expect((yield* command.state).installedPath).toBeNull();
       const installed = yield* command.install;
       expect(installed.installedPath).toBe(link);
       expect(installed.launcherPath).toBe(path.join(home, ".t3", "bin", "t3"));
@@ -129,7 +130,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       yield* Effect.all([command.addToPath, command.addToPath], { concurrency: "unbounded" });
       expect((yield* command.addToPath).pathSetup).toEqual({ file: "~/.zshrc", added: true });
       expect(yield* fs.readFileString(zshrc)).toBe(
-        '# mine\n# Added by T3 Code\nexport PATH="$PATH:$HOME/.local/bin"\n',
+        '# mine\n# Added by L3\nexport PATH="$PATH:$HOME/.local/bin"\n',
       );
 
       expect((yield* command.uninstall).installedPath).toBeNull();
