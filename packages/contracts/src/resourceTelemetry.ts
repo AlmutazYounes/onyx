@@ -19,6 +19,50 @@ export const LocalModelStats = Schema.Struct({
 });
 export type LocalModelStats = typeof LocalModelStats.Type;
 
+export const ModelContextCategoryId = Schema.Literals([
+  "messages",
+  "systemPrompt",
+  "systemTools",
+  "mcpTools",
+  "skills",
+  "memoryFiles",
+]);
+export type ModelContextCategoryId = typeof ModelContextCategoryId.Type;
+
+export const ModelContextTool = Schema.Struct({
+  name: TrimmedNonEmptyString,
+  kind: Schema.Literals(["system", "mcp", "skill"]),
+  /** The MCP server (or built-in catalog) a Code Mode tool belongs to. */
+  group: Schema.optional(TrimmedNonEmptyString),
+});
+export type ModelContextTool = typeof ModelContextTool.Type;
+
+/** What filled the local model's context on a thread's latest request. */
+export const ModelContextBreakdown = Schema.Struct({
+  measuredAt: NonNegativeInt,
+  /** True when token counts come from the model's own usage report rather than an estimate. */
+  exact: Schema.Boolean,
+  contextTokens: NonNegativeInt,
+  usedTokens: NonNegativeInt,
+  outputReserveTokens: NonNegativeInt,
+  categories: Schema.Array(Schema.Struct({ id: ModelContextCategoryId, tokens: NonNegativeInt })),
+  tools: Schema.Array(ModelContextTool),
+  /** Code Mode catalogs; tools beyond `loaded` cost no context until the model looks them up. */
+  toolGroups: Schema.Array(
+    Schema.Struct({
+      name: TrimmedNonEmptyString,
+      kind: Schema.Literals(["system", "mcp"]),
+      tools: NonNegativeInt,
+      loaded: NonNegativeInt,
+    }),
+  ),
+  memoryFiles: Schema.Array(Schema.String),
+});
+export type ModelContextBreakdown = typeof ModelContextBreakdown.Type;
+
+export const ServerGetModelContextInput = Schema.Struct({ threadId: TrimmedNonEmptyString });
+export type ServerGetModelContextInput = typeof ServerGetModelContextInput.Type;
+
 export const HostResourcesSnapshot = Schema.Struct({
   sampledAt: NonNegativeInt,
   cpuUtilization: Schema.NullOr(UnitInterval),

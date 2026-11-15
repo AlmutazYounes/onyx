@@ -1,6 +1,10 @@
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- A raw proxy server must stream bytes through untouched.
 import * as NodeHttp from "node:http";
 
+import { L3_LOCAL_CONTEXT_TOKENS, type ModelContextBreakdown } from "@t3tools/contracts";
+
+import { analyzeChatRequest, threadKeyOf, toContextBreakdown } from "./L3ContextBreakdown.ts";
+
 /**
  * Tracks generation speed for L3's local model. Ollama reports no live rate, so OpenCode reaches
  * Ollama through this proxy, which counts streamed chunks (one token each) per response.
@@ -65,9 +69,14 @@ export function makeTokenRateMeter(): TokenRateMeter {
 }
 
 /** Feeds one server-sent-events body through `meter`, one `data:` line at a time. */
-export function makeSseTokenParser(stream: StreamMeter, now: () => number) {
+export function makeSseTokenParser(
+  stream: StreamMeter,
+  now: () => number,
+  onEnd: (usage: { readonly promptTokens: number | null }) => void = () => {},
+) {
   let buffer = "";
   let completionTokens: number | undefined;
+  let promptTokens: number | null = null;
   const line = (text: string) => {
     if (!text.startsWith("data:")) return;
     const data = text.slice(5).trim();
@@ -75,11 +84,12 @@ export function makeSseTokenParser(stream: StreamMeter, now: () => number) {
     try {
       const chunk = JSON.parse(data) as {
         choices?: ReadonlyArray<{ delta?: Record<string, unknown> }>;
-        usage?: { completion_tokens?: number };
+        usage?: { completion_tokens?: number; prompt_tokens?: number };
       };
       if (typeof chunk.usage?.completion_tokens === "number") {
         completionTokens = chunk.usage.completion_tokens;
       }
+      if (typeof chunk.usage?.prompt_tokens === "number") promptTokens = chunk.usage.prompt_tokens;
       const delta = chunk.choices?.[0]?.delta;
       if (
         delta &&
@@ -102,16 +112,37 @@ export function makeSseTokenParser(stream: StreamMeter, now: () => number) {
     end: () => {
       if (buffer) line(buffer.trimEnd());
       stream.end(now(), completionTokens);
+      onEnd({ promptTokens });
     },
   };
 }
+
+const MAX_ANALYZED_BODY_BYTES = 32 * 1024 * 1024;
 
 /** Starts the metering proxy on a free loopback port; resolves to its port. */
 function startLocalModelProxy(input: {
   readonly meter: TokenRateMeter;
   readonly upstream: URL;
+  /** Sees each chat request body; its result receives the prompt token count when known. */
+  readonly onChatRequest?: (body: unknown) => (promptTokens: number | null) => void;
 }): Promise<{ readonly port: number; readonly close: () => void }> {
   const server = NodeHttp.createServer((request, response) => {
+    const isChat = request.method === "POST" && request.url?.includes("/chat/completions");
+    const bodyChunks: Buffer[] = [];
+    let bodyBytes = 0;
+    let onUsage: (promptTokens: number | null) => void = () => {};
+    if (isChat && input.onChatRequest) {
+      request.on("data", (chunk: Buffer) => {
+        // Past this size the body is not worth holding twice; the request still goes through.
+        if ((bodyBytes += chunk.length) <= MAX_ANALYZED_BODY_BYTES) bodyChunks.push(chunk);
+      });
+      request.on("end", () => {
+        if (bodyBytes > MAX_ANALYZED_BODY_BYTES) return;
+        try {
+          onUsage = input.onChatRequest!(JSON.parse(Buffer.concat(bodyChunks).toString("utf8")));
+        } catch {}
+      });
+    }
     const upstream = NodeHttp.request(
       {
         hostname: input.upstream.hostname,
@@ -125,7 +156,11 @@ function startLocalModelProxy(input: {
         const streaming = String(upstreamResponse.headers["content-type"]).includes(
           "text/event-stream",
         );
-        const parser = streaming ? makeSseTokenParser(input.meter.begin(), Date.now) : null;
+        const parser = streaming
+          ? makeSseTokenParser(input.meter.begin(), Date.now, ({ promptTokens }) =>
+              onUsage(promptTokens),
+            )
+          : null;
         let ended = false;
         const finish = () => {
           if (ended) return;
@@ -170,16 +205,52 @@ function startLocalModelProxy(input: {
 
 const l3Meter = makeTokenRateMeter();
 let l3Proxy: Promise<string | null> | undefined;
+// Latest request per thread; bounded so long-lived servers do not keep every thread forever.
+const l3Contexts = new Map<string, ModelContextBreakdown>();
+const MAX_TRACKED_THREADS = 64;
 
 /** The process-wide meter that `ensureL3ModelProxy` feeds. */
 export const readL3ModelRate = (now: number) => l3Meter.read(now);
+
+/** What filled the model's context on the thread's latest request, or null before one. */
+export const readL3ModelContext = (threadId: string) =>
+  l3Contexts.get(threadKeyOf(threadId)) ?? null;
+
+const recordChatRequest = (body: unknown) => {
+  const shape = analyzeChatRequest(body);
+  const key = shape?.threadKey;
+  if (!shape || !key) return () => {};
+  const store = (promptTokens: number | null) => {
+    l3Contexts.delete(key);
+    l3Contexts.set(
+      key,
+      toContextBreakdown({
+        shape,
+        promptTokens,
+        contextTokens: L3_LOCAL_CONTEXT_TOKENS,
+        // @effect-diagnostics-next-line globalDate:off -- the proxy runs on Node callbacks, outside Effect.
+        measuredAt: Date.now(),
+      }),
+    );
+    if (l3Contexts.size > MAX_TRACKED_THREADS) {
+      l3Contexts.delete(l3Contexts.keys().next().value!);
+    }
+  };
+  // Show the estimate at once; the usage report replaces it when the response ends.
+  store(null);
+  return store;
+};
 
 /**
  * Starts the process-wide proxy once and resolves to its OpenAI-compatible base URL, or null when
  * it could not start (OpenCode then talks to Ollama directly and no rate is shown).
  */
 export function ensureL3ModelProxy(upstreamBaseUrl: string): Promise<string | null> {
-  l3Proxy ??= startLocalModelProxy({ meter: l3Meter, upstream: new URL(upstreamBaseUrl) }).then(
+  l3Proxy ??= startLocalModelProxy({
+    meter: l3Meter,
+    upstream: new URL(upstreamBaseUrl),
+    onChatRequest: recordChatRequest,
+  }).then(
     ({ port }) => `http://127.0.0.1:${port}${new URL(upstreamBaseUrl).pathname}`,
     () => null,
   );

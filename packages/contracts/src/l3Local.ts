@@ -4,7 +4,7 @@
 export const L3_OLLAMA_BASE_URL = "http://127.0.0.1:11434/v1";
 export const L3_LOCAL_MODEL = "l3-coder";
 const L3_LOCAL_MODEL_NAME = "Qwen 3.6 35B-A3B (local)";
-const L3_LOCAL_CONTEXT_TOKENS = 65_536;
+export const L3_LOCAL_CONTEXT_TOKENS = 65_536;
 
 /** OpenCode provider id that carries the local model; OpenCode model slugs are `<provider>/<model>`. */
 const L3_OPENCODE_PROVIDER_ID = "l3";

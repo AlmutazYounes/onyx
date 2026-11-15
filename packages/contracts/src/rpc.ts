@@ -346,6 +346,8 @@ import {
 } from "./server.ts";
 import {
   HostResourcesSnapshot,
+  ModelContextBreakdown,
+  ServerGetModelContextInput,
   ResourceTelemetryHistory,
   ResourceTelemetryHistoryInput,
   ResourceTelemetryRetryResult,
@@ -541,6 +543,7 @@ export const WS_METHODS = {
   serverGetTraceDiagnostics: "server.getTraceDiagnostics",
   serverGetProcessDiagnostics: "server.getProcessDiagnostics",
   serverGetHostResources: "server.getHostResources",
+  serverGetModelContext: "server.getModelContext",
   serverGetProcessResourceHistory: "server.getProcessResourceHistory",
   serverGetResourceTelemetryHistory: "server.getResourceTelemetryHistory",
   serverRetryResourceTelemetry: "server.retryResourceTelemetry",
@@ -980,6 +983,12 @@ const WsServerGetProcessDiagnosticsRpc = Rpc.make(WS_METHODS.serverGetProcessDia
 const WsServerGetHostResourcesRpc = Rpc.make(WS_METHODS.serverGetHostResources, {
   payload: Schema.Struct({}),
   success: HostResourcesSnapshot,
+  error: EnvironmentAuthorizationError,
+});
+
+const WsServerGetModelContextRpc = Rpc.make(WS_METHODS.serverGetModelContext, {
+  payload: ServerGetModelContextInput,
+  success: Schema.NullOr(ModelContextBreakdown),
   error: EnvironmentAuthorizationError,
 });
 
@@ -2163,6 +2172,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerGetTraceDiagnosticsRpc,
   WsServerGetProcessDiagnosticsRpc,
   WsServerGetHostResourcesRpc,
+  WsServerGetModelContextRpc,
   WsServerGetProcessResourceHistoryRpc,
   WsServerGetResourceTelemetryHistoryRpc,
   WsServerRetryResourceTelemetryRpc,

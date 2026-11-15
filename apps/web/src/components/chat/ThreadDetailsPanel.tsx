@@ -23,6 +23,7 @@ import { memo, useState, type ComponentProps } from "react";
 import { ThreadDetailsCard } from "./ThreadDetailsCard";
 import { OpenInPicker } from "./OpenInPicker";
 import { ThreadDetailsMachineStats } from "./ThreadDetailsMachineStats";
+import { ThreadDetailsModelContext } from "./ThreadDetailsModelContext";
 import { ThreadDetailsSection } from "./ThreadDetailsSection";
 import { ThreadAutomationsPanel } from "./ThreadAutomationsPanel";
 import { ThreadRelationshipsPanel } from "./ThreadRelationshipsControl";
@@ -291,8 +292,16 @@ export function ThreadDetailsPanel(props: ThreadDetailsPanelProps) {
 
               {visible.usage ? <ThreadDetailsUsage {...props.usage} /> : null}
 
-              {visible.context && props.usage.contextWindow ? (
-                <ThreadDetailsContext usage={props.usage.contextWindow} />
+              {visible.context ? (
+                <ThreadDetailsModelContext
+                  environmentId={props.environmentId}
+                  threadId={props.draftId ? null : props.threadId}
+                  fallback={
+                    props.usage.contextWindow ? (
+                      <ThreadDetailsContext usage={props.usage.contextWindow} />
+                    ) : null
+                  }
+                />
               ) : null}
 
               {/* Shown only when no section above has content, so an emptied card can be refilled. */}
