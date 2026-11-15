@@ -94,7 +94,9 @@ export function analyzeChatRequest(body: unknown): ChatRequestShape | null {
     max_completion_tokens?: number;
     max_tokens?: number;
   };
-  if (!Array.isArray(request.messages)) return null;
+  // Side requests (goal checks, titles, compaction summaries) carry no tools; they are not the
+  // agent's context, so the panel keeps showing the last real turn.
+  if (!Array.isArray(request.messages) || !request.tools?.length) return null;
 
   let systemText = "";
   let messageChars = 0;

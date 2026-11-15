@@ -1575,6 +1575,10 @@ export const ServerSettings = Schema.Struct({
   usageLimitSources: Schema.Record(UsageLimitSourceId, UsageLimitSourceConfig).pipe(
     Schema.withDecodingDefault(Effect.succeed({})),
   ),
+  /** L3 agent items switched on or off; see `l3AgentItemEnabled` for the defaults. */
+  l3AgentItems: Schema.Record(TrimmedNonEmptyString, Schema.Boolean).pipe(
+    Schema.withDecodingDefault(Effect.succeed({})),
+  ),
   textGenerators: Schema.Record(ProviderInstanceId, TextGeneratorConfig).pipe(
     Schema.withDecodingDefault(
       Effect.succeed({
@@ -1973,6 +1977,7 @@ export const ServerSettingsPatch = Schema.Struct({
     Schema.Record(UsageLimitSourceId, Schema.NullOr(UsageLimitSourceConfig)),
   ),
   // Merge per entry like usageLimitSources; null removes an entry.
+  l3AgentItems: Schema.optionalKey(Schema.Record(TrimmedNonEmptyString, Schema.Boolean)),
   textGenerators: Schema.optionalKey(
     Schema.Record(ProviderInstanceId, Schema.NullOr(TextGeneratorConfig)),
   ),

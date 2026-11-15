@@ -1,16 +1,22 @@
-import type {
-  EnvironmentId,
-  ModelContextBreakdown,
-  ModelContextCategoryId,
-  ThreadId,
+import {
+  L3_LOCKED_TOOLS,
+  l3AgentItemEnabled,
+  type L3AgentItems,
+  type EnvironmentId,
+  type ModelContextBreakdown,
+  type ModelContextCategoryId,
+  type ThreadId,
 } from "@t3tools/contracts";
 import { ChevronRightIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { useEnvironmentSettings, useUpdateEnvironmentSettings } from "../../hooks/useSettings";
 import { formatContextWindowTokens } from "../../lib/contextWindow";
 import { cn } from "../../lib/utils";
 import { useEnvironmentQuery } from "../../state/query";
 import { serverEnvironment } from "../../state/server";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import { ThreadDetailsSection } from "./ThreadDetailsSection";
 
 const CATEGORY_STYLE: Record<ModelContextCategoryId, { label: string; swatch: string }> = {
@@ -39,10 +45,16 @@ const share = (tokens: number, total: number) =>
 export function ThreadDetailsModelContext({
   environmentId,
   threadId,
+  skills,
+  onStartGoal,
   fallback,
 }: {
   readonly environmentId: EnvironmentId;
   readonly threadId: ThreadId | null;
+  /** Every skill the provider knows; switched-off skills never appear in a request. */
+  readonly skills: readonly string[];
+  /** Puts `/goal ` in this thread's composer; absent where there is no composer. */
+  readonly onStartGoal?: (() => void) | undefined;
   readonly fallback: ReactNode;
 }) {
   const { data } = useEnvironmentQuery(
@@ -50,10 +62,29 @@ export function ThreadDetailsModelContext({
       ? null
       : serverEnvironment.modelContext({ environmentId, input: { threadId } }),
   );
-  return data ? <ModelContextBody breakdown={data} /> : fallback;
+  return data ? (
+    <ModelContextBody
+      breakdown={data}
+      environmentId={environmentId}
+      skills={skills}
+      onStartGoal={onStartGoal}
+    />
+  ) : (
+    fallback
+  );
 }
 
-function ModelContextBody({ breakdown }: { readonly breakdown: ModelContextBreakdown }) {
+function ModelContextBody({
+  breakdown,
+  environmentId,
+  skills,
+  onStartGoal,
+}: {
+  readonly breakdown: ModelContextBreakdown;
+  readonly environmentId: EnvironmentId;
+  readonly skills: readonly string[];
+  readonly onStartGoal: (() => void) | undefined;
+}) {
   const total = breakdown.contextTokens;
   const tokensOf = (id: ModelContextCategoryId) =>
     breakdown.categories.find((category) => category.id === id)?.tokens ?? 0;
@@ -64,29 +95,6 @@ function ModelContextBody({ breakdown }: { readonly breakdown: ModelContextBreak
   );
   const free = Math.max(0, total - breakdown.usedTokens - reserve);
   const usedPercent = total > 0 ? Math.round((breakdown.usedTokens / total) * 100) : 0;
-  const direct = breakdown.tools.filter((tool) => tool.kind === "system" && !tool.group);
-  const groupsOf = (kind: "system" | "mcp") =>
-    breakdown.toolGroups.filter((group) => group.kind === kind);
-  const groupLines = (kind: "system" | "mcp"): ToolListItem[] =>
-    groupsOf(kind).flatMap((group) => [
-      {
-        id: group.name,
-        label: `${groupLabel(group.name)}: ${group.tools} tools, ${group.loaded} loaded`,
-        nested: false,
-      },
-      ...breakdown.tools
-        .filter((tool) => tool.group === group.name)
-        .map((tool) => ({
-          id: tool.name,
-          label: tool.name.slice(group.name.length + 1),
-          nested: true,
-        })),
-    ]);
-  const plain = (names: readonly string[]): ToolListItem[] =>
-    names.map((name) => ({ id: name, label: name, nested: false }));
-  const totalOf = (kind: "system" | "mcp") =>
-    groupsOf(kind).reduce((sum, group) => sum + group.tools, 0);
-  const skills = breakdown.tools.filter((tool) => tool.kind === "skill").map((tool) => tool.name);
 
   return (
     <ThreadDetailsSection headingId="thread-details-model-context-heading" title="Context">
@@ -142,20 +150,17 @@ function ModelContextBody({ breakdown }: { readonly breakdown: ModelContextBreak
             total={total}
           />
         </ul>
-        <div className="flex flex-col border-border/65 border-t pt-1.5">
-          <ToolList
-            title="System tools"
-            count={direct.length + totalOf("system")}
-            items={[...plain(direct.map((tool) => tool.name)), ...groupLines("system")]}
-          />
-          <ToolList title="MCP tools" count={totalOf("mcp")} items={groupLines("mcp")} />
-          <ToolList title="Skills" count={skills.length} items={plain(skills)} />
-          <ToolList
-            title="Memory files"
-            count={breakdown.memoryFiles.length}
-            items={plain(breakdown.memoryFiles)}
-          />
-        </div>
+        {onStartGoal ? (
+          <div className="flex items-center justify-between gap-2 border-border/65 border-t pt-1.5">
+            <span className="text-muted-foreground">
+              Big job? A goal keeps the agent working until it is done.
+            </span>
+            <Button size="xs" variant="outline" onClick={onStartGoal}>
+              Long task
+            </Button>
+          </div>
+        ) : null}
+        <AgentItems breakdown={breakdown} environmentId={environmentId} skills={skills} />
       </div>
     </ThreadDetailsSection>
   );
@@ -184,23 +189,172 @@ function ContextRow({
   );
 }
 
-interface ToolListItem {
-  readonly id: string;
-  readonly label: string;
-  readonly nested: boolean;
-}
-
 // Each thread's own T3 MCP server is named after the thread; show what it is instead.
 const groupLabel = (name: string) => (name.startsWith("t3-code-") ? "L3 (this thread)" : name);
+const BROWSER_GROUP = "browser";
+// Lean: skills off (the default), plus web access and the shared browser.
+const LEAN_ITEMS: L3AgentItems = {
+  "skill:*": false,
+  "tool:websearch": false,
+  "tool:webfetch": false,
+};
 
-function ToolList({
+interface AgentItem {
+  readonly id: string;
+  readonly label: string;
+  readonly detail?: string | undefined;
+  readonly checked: boolean;
+  /** Locked items show their state but cannot be switched off. */
+  readonly locked?: boolean;
+  readonly onChange?: ((checked: boolean) => void) | undefined;
+}
+
+/** What the agent can use, with checkboxes. Unchecked items leave the prompt from the next turn. */
+function AgentItems({
+  breakdown,
+  environmentId,
+  skills,
+}: {
+  readonly breakdown: ModelContextBreakdown;
+  readonly environmentId: EnvironmentId;
+  readonly skills: readonly string[];
+}) {
+  const items = useEnvironmentSettings(environmentId, (settings) => settings.l3AgentItems);
+  const browserOn = useEnvironmentSettings(
+    environmentId,
+    (settings) => settings.enableAgentBrowserAccess,
+  );
+  const updateSettings = useUpdateEnvironmentSettings(environmentId);
+  const setItems = (patch: L3AgentItems) => void updateSettings({ l3AgentItems: patch });
+  const toggle = (id: string) => (checked: boolean) => setItems({ [id]: checked });
+  // Switched-off items drop out of requests, so settings keep them listed.
+  const offIds = (prefix: string) =>
+    Object.entries(items)
+      .filter(([id, enabled]) => id.startsWith(prefix) && !enabled && !id.endsWith("*"))
+      .map(([id]) => id.slice(prefix.length));
+  const union = (seen: readonly string[], prefix: string) =>
+    [...new Set([...seen, ...offIds(prefix)])].toSorted((a, b) => a.localeCompare(b));
+
+  const directTools = union(
+    breakdown.tools
+      .filter((tool) => tool.kind === "system" && !tool.group)
+      .map((tool) => tool.name),
+    "tool:",
+  );
+  const toolItems: AgentItem[] = directTools.map((name) => ({
+    id: `tool:${name}`,
+    label: name,
+    detail: name === "execute" ? "runs every MCP and Code Mode tool" : undefined,
+    checked: l3AgentItemEnabled(items, `tool:${name}`),
+    locked: L3_LOCKED_TOOLS.has(name),
+    onChange: toggle(`tool:${name}`),
+  }));
+
+  const groups = new Map(breakdown.toolGroups.map((group) => [group.name, group]));
+  const groupNames = union([...groups.keys()], "mcp:");
+  if (!browserOn && !groupNames.includes(BROWSER_GROUP)) groupNames.push(BROWSER_GROUP);
+  const groupItems: AgentItem[] = groupNames.map((name) => {
+    const group = groups.get(name);
+    const isBrowser = name === BROWSER_GROUP;
+    return {
+      id: `mcp:${name}`,
+      label: groupLabel(name),
+      detail: group ? `${group.tools} tools, ${group.loaded} loaded` : "off",
+      checked: isBrowser ? browserOn : l3AgentItemEnabled(items, `mcp:${name}`),
+      // The thread's own server names the thread for this panel; keep it on.
+      locked: name.startsWith("t3-code-"),
+      onChange: isBrowser
+        ? (checked: boolean) => void updateSettings({ enableAgentBrowserAccess: checked })
+        : toggle(`mcp:${name}`),
+    };
+  });
+
+  const skillNames = [...new Set([...skills, ...offIds("skill:")])].toSorted((a, b) =>
+    a.localeCompare(b),
+  );
+  const skillsOn = items["skill:*"] ?? false;
+  const skillItems: AgentItem[] = skillNames.map((name) => ({
+    id: `skill:${name}`,
+    label: name,
+    checked: l3AgentItemEnabled(items, `skill:${name}`),
+    onChange: toggle(`skill:${name}`),
+  }));
+  const enabledSkills = skillItems.filter((item) => item.checked).length;
+
+  return (
+    <div className="flex flex-col border-border/65 border-t pt-1.5">
+      <div className="flex items-center justify-between gap-2 pb-1">
+        <span className="text-muted-foreground">Fewer items make each reply start sooner.</span>
+        <Button
+          size="xs"
+          variant="outline"
+          onClick={() => {
+            // Explicit skill picks would outlive "all skills off", so clear them too.
+            const cleared = Object.fromEntries(
+              Object.keys(items)
+                .filter((id) => id.startsWith("skill:"))
+                .map((id) => [id, false]),
+            );
+            setItems({ ...cleared, ...LEAN_ITEMS });
+            void updateSettings({ enableAgentBrowserAccess: false });
+          }}
+        >
+          Lean
+        </Button>
+      </div>
+      <AgentItemList title="System tools" count={toolItems.length} items={toolItems} />
+      <AgentItemList
+        title="MCP servers"
+        count={groupItems.length}
+        items={groupItems}
+        note="Browser changes apply when the agent session next starts."
+      />
+      <AgentItemList
+        title="Skills"
+        count={skillItems.length}
+        summary={`${enabledSkills} on`}
+        items={skillItems}
+        header={
+          <AgentItemRow
+            item={{
+              id: "skill:*",
+              label: "All skills",
+              checked: skillsOn,
+              onChange: (checked) =>
+                setItems({
+                  "skill:*": checked,
+                  ...Object.fromEntries(skillNames.map((name) => [`skill:${name}`, checked])),
+                }),
+            }}
+          />
+        }
+      />
+      <AgentItemList
+        title="Memory files"
+        count={breakdown.memoryFiles.length}
+        items={breakdown.memoryFiles.map((path) => ({ id: path, label: path, checked: true }))}
+        readOnly
+      />
+    </div>
+  );
+}
+
+function AgentItemList({
   title,
   count,
+  summary,
   items,
+  header,
+  note,
+  readOnly = false,
 }: {
   readonly title: string;
   readonly count: number;
-  readonly items: readonly ToolListItem[];
+  readonly summary?: string;
+  readonly items: readonly AgentItem[];
+  readonly header?: ReactNode;
+  readonly note?: string;
+  readonly readOnly?: boolean;
 }) {
   if (count === 0) return null;
   return (
@@ -211,21 +365,48 @@ function ToolList({
           className="size-3.5 shrink-0 transition-transform group-open/tools:rotate-90"
         />
         <span className="flex-1 truncate">{title}</span>
-        <span className="tabular-nums">{count}</span>
+        <span className="tabular-nums">{summary ?? count}</span>
       </summary>
-      <ul className="mb-1 ml-5 flex max-h-48 flex-col gap-0.5 overflow-y-auto pr-1">
-        {items.map((item) => (
-          <li
-            key={item.id}
-            className={cn(
-              "break-all font-mono text-2xs",
-              item.nested ? "pl-3 text-foreground/75" : "text-muted-foreground",
-            )}
-          >
-            {item.label}
-          </li>
-        ))}
+      <ul className="mb-1 ml-5 flex max-h-56 flex-col gap-0.5 overflow-y-auto pr-1">
+        {header}
+        {items.map((item) =>
+          readOnly ? (
+            <li key={item.id} className="break-all font-mono text-2xs text-muted-foreground">
+              {item.label}
+            </li>
+          ) : (
+            <AgentItemRow key={item.id} item={item} />
+          ),
+        )}
       </ul>
+      {note ? <p className="mb-1 ml-5 text-2xs text-muted-foreground">{note}</p> : null}
     </details>
+  );
+}
+
+function AgentItemRow({ item }: { readonly item: AgentItem }) {
+  return (
+    <li>
+      <label className="flex min-h-6 cursor-default items-center gap-2">
+        <Checkbox
+          checked={item.checked}
+          disabled={item.locked === true || item.onChange === undefined}
+          onCheckedChange={(checked) => item.onChange?.(checked)}
+        />
+        <span
+          className={cn(
+            "min-w-0 flex-1 break-all font-mono text-2xs",
+            item.checked ? "text-foreground/85" : "text-muted-foreground line-through",
+          )}
+        >
+          {item.label}
+        </span>
+        {item.locked ? (
+          <span className="text-2xs text-muted-foreground">needed</span>
+        ) : item.detail ? (
+          <span className="shrink-0 text-2xs text-muted-foreground">{item.detail}</span>
+        ) : null}
+      </label>
+    </li>
   );
 }

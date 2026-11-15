@@ -1,7 +1,6 @@
 import { resolveProviderProbeTimeoutMs } from "@t3tools/provider-core/server/snapshotProbe";
 import {
   L3_OLLAMA_BASE_URL,
-  L3_OPENCODE_CONFIG_CONTENT,
   makeL3OpenCodeConfigContent,
   ProviderDriverKind,
   settingsSecretLiteral,
@@ -60,6 +59,7 @@ import {
   type ProbedOpenCode,
 } from "./versionProbe.ts";
 import * as OpenCodeServerOwner from "./OpenCodeServerOwner.ts";
+import { L3_INSTRUCTIONS } from "./L3Instructions.ts";
 import { ensureL3ModelProxy } from "./L3ModelMeter.ts";
 import * as OpenCode2Client from "./v2/OpenCode2Client.ts";
 import * as OpenCode2Server from "./v2/OpenCode2Server.ts";
@@ -97,6 +97,7 @@ const L3_HOMEBREW_OPENCODE = "/opt/homebrew/bin/opencode";
 const withL3OpenCodeIsolation = (
   env: NodeJS.ProcessEnv,
   modelBaseUrl: string | null,
+  instructionsPath: string | undefined,
 ): NodeJS.ProcessEnv => {
   const isolate = env.HOME !== undefined && env.L3_OPENCODE_SHARED_DATA !== "1";
   return {
@@ -106,7 +107,7 @@ const withL3OpenCodeIsolation = (
       : {}),
     OPENCODE_CONFIG_CONTENT:
       env.OPENCODE_CONFIG_CONTENT ??
-      (modelBaseUrl ? makeL3OpenCodeConfigContent(modelBaseUrl) : L3_OPENCODE_CONFIG_CONTENT),
+      makeL3OpenCodeConfigContent(modelBaseUrl ?? undefined, { instructionsPath }),
     OPENCODE_DISABLE_AUTOUPDATE: env.OPENCODE_DISABLE_AUTOUPDATE ?? "1",
     OPENCODE_DISABLE_FREE_MODELS: env.OPENCODE_DISABLE_FREE_MODELS ?? "1",
     // The models.dev catalog describes hosted models; L3's one model is defined inline.
@@ -311,9 +312,18 @@ export const OpenCodeDriver: ProviderDriver<
     const host = yield* ProviderHost.ProviderHost;
     // Started before OpenCode so every request it makes is metered for the details panel.
     const modelBaseUrl = yield* Effect.promise(() => ensureL3ModelProxy(L3_OLLAMA_BASE_URL));
+    const home = yield* HostProcess.HomeDirectory;
+    // OpenCode reads instructions from files; a failed write just leaves them out.
+    const instructionsPath = yield* Effect.gen(function* () {
+      const path = pathService.join(home, ".l3", "opencode", "instructions.md");
+      yield* fileSystem.makeDirectory(pathService.dirname(path), { recursive: true });
+      yield* fileSystem.writeFileString(path, L3_INSTRUCTIONS);
+      return path;
+    }).pipe(Effect.orElseSucceed(() => undefined));
     const processEnv = withL3OpenCodeIsolation(
       yield* mergeProviderInstanceEnvironment(environment),
       modelBaseUrl,
+      instructionsPath,
     );
     const continuationIdentity = defaultProviderContinuationIdentity({
       driverKind: DRIVER_KIND,

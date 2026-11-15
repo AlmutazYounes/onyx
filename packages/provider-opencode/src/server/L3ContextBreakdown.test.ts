@@ -106,7 +106,8 @@ describe("analyzeChatRequest", () => {
     expect(Math.abs(sum - 1_000)).toBeLessThanOrEqual(breakdown.categories.length);
   });
 
-  it("ignores requests that are not chat completions", () => {
+  it("ignores requests that are not agent turns", () => {
     expect(analyzeChatRequest({ prompt: "hi" })).toBeNull();
+    expect(analyzeChatRequest({ ...body, tools: [] })).toBeNull();
   });
 });

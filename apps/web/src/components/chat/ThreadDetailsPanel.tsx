@@ -22,6 +22,8 @@ import ProjectScriptsControl, {
 import { memo, useState, type ComponentProps } from "react";
 import { ThreadDetailsCard } from "./ThreadDetailsCard";
 import { OpenInPicker } from "./OpenInPicker";
+import { resolveProviderSkillsForCwd } from "@t3tools/client-runtime/providerSkills";
+import { useComposerDraftStore } from "~/composerDraftStore";
 import { ThreadDetailsMachineStats } from "./ThreadDetailsMachineStats";
 import { ThreadDetailsModelContext } from "./ThreadDetailsModelContext";
 import { ThreadDetailsSection } from "./ThreadDetailsSection";
@@ -112,6 +114,13 @@ export function ThreadDetailsPanel(props: ThreadDetailsPanelProps) {
     serverConfig !== undefined &&
     project !== null &&
     !isScratchProject(project, serverConfig.scratchWorkspaceRoot);
+  const activeProvider = props.usage.providers.find(
+    (provider) => provider.instanceId === props.usage.providerInstanceId,
+  );
+  // Same per-folder catalog the composer's $ menu uses; the base snapshot may list none.
+  const providerSkillNames = activeProvider
+    ? resolveProviderSkillsForCwd(activeProvider, props.gitCwd).map((skill) => skill.name)
+    : [];
   const branchToolbarProps = {
     showGitControls: props.isGitRepo,
     environmentId: props.environmentId,
@@ -296,6 +305,11 @@ export function ThreadDetailsPanel(props: ThreadDetailsPanelProps) {
                 <ThreadDetailsModelContext
                   environmentId={props.environmentId}
                   threadId={props.draftId ? null : props.threadId}
+                  skills={providerSkillNames}
+                  onStartGoal={() => {
+                    useComposerDraftStore.getState().setPrompt(props.composerDraftTarget, "/goal ");
+                    props.onComposerFocusRequest();
+                  }}
                   fallback={
                     props.usage.contextWindow ? (
                       <ThreadDetailsContext usage={props.usage.contextWindow} />

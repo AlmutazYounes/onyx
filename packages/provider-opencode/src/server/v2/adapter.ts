@@ -104,6 +104,7 @@ import {
   openCodeCommandFailed,
   openCodeToolTurnItem,
 } from "../toolItems.ts";
+import { l3AgentItemRules } from "../L3AgentItems.ts";
 
 const NativeGoal = Schema.NullOr(
   Schema.Struct({
@@ -454,6 +455,7 @@ const sessionRules = (
   ...(policy.interactionMode === "plan" ? [rule("edit", "deny")] : []),
   ...paths,
   ...mcpRules(mcpServerName),
+  ...l3AgentItemRules(),
 ];
 
 const sameRules = (left: ReadonlyArray<Rule> | undefined, right: ReadonlyArray<Rule>) =>

@@ -31,6 +31,22 @@ The thread details panel (right side, under the machine name) shows live CPU, RA
 the model's tokens per second. L3 measures speed with a small loopback proxy between OpenCode and
 Ollama.
 
+### Lighter prompts
+
+OpenCode sends its whole catalog with every request, and a smaller prompt means each reply starts
+sooner. In the **Context** section, tick or untick system tools, MCP servers and skills; changes
+apply from the next message. Skills are off by default because their catalog was the largest
+item (about 7k of 15k tokens). **Lean** also turns off web search, web fetch and the shared
+browser. `read`, `edit`, `write` and `shell` stay on.
+
+### Long tasks
+
+For a big job, press **Long task** (or type `/goal`) and describe what "done" means, for example
+`/goal a complete portfolio website with home, projects and contact pages that builds without
+errors`. The agent keeps working across turns until it judges the goal met; **Clear** stops it.
+L3 also gives the model standing instructions (`~/.l3/opencode/instructions.md`): plan with a
+todo list, finish every item, verify by running the build or tests, and leave no stubs.
+
 ## Use L3
 
 ```bash
