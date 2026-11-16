@@ -184,10 +184,13 @@ export function UsageRow({
   ariaValue = value,
   tooltip,
   muted = false,
+  segments,
 }: {
   readonly label: string;
   /** Bar fill from 0 to 100. Null hides the bar. */
   readonly fill: number | null;
+  /** Splits the fill into colored parts, left to right, each from 0 to 100 of the bar. */
+  readonly segments?: ReadonlyArray<{ readonly fill: number; readonly className: string }>;
   readonly tone: UsageTone;
   /** A marker on the bar, from 0 to 100. */
   readonly tick?: number | null;
@@ -210,7 +213,19 @@ export function UsageRow({
         <span className="max-w-28 truncate text-muted-foreground">{label}</span>
         {fill !== null ? (
           <span className="relative h-[3px] rounded-full bg-muted-foreground/30 dark:bg-muted-foreground/20">
-            {fill > 0 ? (
+            {segments ? (
+              <span className="absolute inset-0 flex overflow-hidden rounded-full">
+                {segments.map((segment) =>
+                  segment.fill > 0 ? (
+                    <span
+                      key={segment.className}
+                      className={cn("h-full", segment.className)}
+                      style={{ width: `${Math.min(100, segment.fill)}%` }}
+                    />
+                  ) : null,
+                )}
+              </span>
+            ) : fill > 0 ? (
               <span
                 className={cn(
                   "absolute inset-y-0 left-0 rounded-full",

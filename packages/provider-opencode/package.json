@@ -47,6 +47,10 @@
       "types": "./src/server/L3ModelMeter.ts",
       "import": "./src/server/L3ModelMeter.ts"
     },
+    "./server/L3CodeSearch": {
+      "types": "./src/server/L3CodeSearch.ts",
+      "import": "./src/server/L3CodeSearch.ts"
+    },
     "./server/L3AgentItems": {
       "types": "./src/server/L3AgentItems.ts",
       "import": "./src/server/L3AgentItems.ts"

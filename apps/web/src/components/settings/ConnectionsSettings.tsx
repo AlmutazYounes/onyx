@@ -1044,7 +1044,7 @@ function ConnectionsSettingsContent({
         {desktopWslState.enabled ? (
           <SettingsRow
             title="WSL only"
-            description="Run only the WSL backend. L3 restarts when this changes."
+            description="Run only the WSL backend. Onyx restarts when this changes."
             className="bg-muted/20 pl-7 sm:pl-8"
             control={
               <Switch
@@ -1408,8 +1408,8 @@ function ConnectionsSettingsContent({
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                   {pendingDesktopServerExposureMode === "network-accessible"
-                    ? "Let your other devices connect to L3 over the network. Pair devices to give them access. L3 will restart."
-                    : "Devices connected over your local network will disconnect. Existing tunnels, such as T3 Connect or Tailscale HTTPS, keep working. L3 will restart."}
+                    ? "Let your other devices connect to Onyx over the network. Pair devices to give them access. Onyx will restart."
+                    : "Devices connected over your local network will disconnect. Existing tunnels, such as T3 Connect or Tailscale HTTPS, keep working. Onyx will restart."}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1465,15 +1465,15 @@ function ConnectionsSettingsContent({
                 <AlertDialogDescription>
                   {pendingWslChange?.kind === "disable"
                     ? pendingWslChange.wasWslOnly
-                      ? "L3 will restart on the Windows backend. Threads and projects opened against WSL stay safe inside the distro and become available again when you re-enable WSL."
-                      : "The WSL backend will stop. Threads and projects opened against WSL stay safe inside the distro, but they'll be unavailable in L3 until you re-enable WSL."
+                      ? "Onyx will restart on the Windows backend. Threads and projects opened against WSL stay safe inside the distro and become available again when you re-enable WSL."
+                      : "The WSL backend will stop. Threads and projects opened against WSL stay safe inside the distro, but they'll be unavailable in Onyx until you re-enable WSL."
                     : pendingWslChange?.kind === "distro"
-                      ? "L3 will restart the WSL backend on the new distro. Sessions still running on the current distro will be interrupted."
+                      ? "Onyx will restart the WSL backend on the new distro. Sessions still running on the current distro will be interrupted."
                       : pendingWslChange?.kind === "enable"
                         ? "Run the WSL backend alongside the Windows one, or stop the Windows backend and use only WSL? You can change this later from Settings."
                         : pendingWslChange?.nextValue
-                          ? "L3 will restart and start only the WSL backend. Your Windows-side projects won't be accessible until you turn this off again."
-                          : "L3 will restart and bring the Windows backend back up alongside WSL."}
+                          ? "Onyx will restart and start only the WSL backend. Your Windows-side projects won't be accessible until you turn this off again."
+                          : "Onyx will restart and bring the Windows backend back up alongside WSL."}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1559,7 +1559,7 @@ function ConnectionsSettingsContent({
               <AlertDialogHeader>
                 <AlertDialogTitle>Disable Tailscale HTTPS?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  L3 will restart the local backend without Tailscale Serve.
+                  Onyx will restart the local backend without Tailscale Serve.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1597,7 +1597,7 @@ function ConnectionsSettingsContent({
               <DialogHeader>
                 <DialogTitle>Set up Tailscale HTTPS?</DialogTitle>
                 <DialogDescription>
-                  L3 will restart the local backend with Tailscale Serve enabled and ask Tailscale
+                  Onyx will restart the local backend with Tailscale Serve enabled and ask Tailscale
                   to proxy HTTPS traffic to this backend.
                 </DialogDescription>
               </DialogHeader>

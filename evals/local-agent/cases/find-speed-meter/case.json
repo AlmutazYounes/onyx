@@ -1,0 +1,17 @@
+{
+  "source": "Navigation in a large repo: find code by what it does, not by its name",
+  "checkout": "dfc2177e",
+  "prompt": "In this codebase, how does the app find out how fast the local model is generating text? Name the file that does the measuring and explain the approach in two or three sentences. Do not change any files.",
+  "criteria": [
+    {
+      "name": "changed no files",
+      "check": "test -z \"$(git status --porcelain)\"",
+      "guard": true
+    },
+    {
+      "name": "names the file",
+      "check": "grep -q 'L3ModelMeter.ts' \"$EVAL_ANSWER\"",
+      "weight": 3
+    }
+  ]
+}

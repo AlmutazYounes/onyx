@@ -1,0 +1,17 @@
+{
+  "source": "Navigation in a large repo: a list of methods described by its purpose",
+  "checkout": "dfc2177e",
+  "prompt": "Some server methods are checked for permission in the web client before it calls them. Which file holds that list of methods? Do not change any files.",
+  "criteria": [
+    {
+      "name": "changed no files",
+      "check": "test -z \"$(git status --porcelain)\"",
+      "guard": true
+    },
+    {
+      "name": "names the file",
+      "check": "grep -q 'clientRpcPermissions.ts' \"$EVAL_ANSWER\"",
+      "weight": 3
+    }
+  ]
+}

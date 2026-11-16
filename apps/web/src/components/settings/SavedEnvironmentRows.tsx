@@ -700,7 +700,7 @@ function ConfiguredCloudLinkRow({
       ) : isElectron ? (
         <SettingsRow
           title={searchableSetting("t3-connect").title}
-          description="Run `t3 connect link` on the host, then restart L3 there."
+          description="Run `t3 connect link` on the host, then restart Onyx there."
         />
       ) : null}
       {signedOut && showSwitch ? null : (

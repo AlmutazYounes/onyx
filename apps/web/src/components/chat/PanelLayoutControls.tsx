@@ -13,6 +13,8 @@ import type { ThreadPanelPresentation } from "../../rightPanelLayout";
 import { PopoverCreateHandle, PopoverTrigger } from "../ui/popover";
 import { useMobileSidebarSheetMounted } from "../ui/sidebar";
 import { Toggle } from "../ui/toggle";
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
+import type { WorkspaceLayout } from "../../workspaceLayout";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 
 /** Matches the right inset of `ThreadPanelHeaderControl`. */
@@ -22,6 +24,7 @@ export interface PanelLayoutControlsProps {
   showThreadPanelControl?: boolean;
   showTerminalControl?: boolean;
   showRightPanelControl?: boolean;
+  showWorkspaceLayoutControl?: boolean;
   terminalAvailable: boolean;
   terminalOpen: boolean;
   terminalShortcutLabel: string | null;
@@ -36,12 +39,17 @@ export interface PanelLayoutControlsProps {
   onToggleTerminal: () => void;
   onToggleThreadPanel: () => void;
   onToggleRightPanel: () => void;
+  /** Shows the Agents | Editor switch when set. */
+  workspaceLayout?: WorkspaceLayout;
+  workspaceLayoutShortcutLabel?: string | null;
+  onWorkspaceLayoutChange?: (layout: WorkspaceLayout) => void;
 }
 
 export const PanelLayoutControls = memo(function PanelLayoutControls({
   showThreadPanelControl = true,
   showTerminalControl = true,
   showRightPanelControl = true,
+  showWorkspaceLayoutControl = true,
   terminalAvailable,
   terminalOpen,
   terminalShortcutLabel,
@@ -56,6 +64,9 @@ export const PanelLayoutControls = memo(function PanelLayoutControls({
   onToggleTerminal,
   onToggleThreadPanel,
   onToggleRightPanel,
+  workspaceLayout,
+  workspaceLayoutShortcutLabel,
+  onWorkspaceLayoutChange,
 }: PanelLayoutControlsProps) {
   const threadPanelToggle = (
     <Toggle
@@ -90,6 +101,29 @@ export const PanelLayoutControls = memo(function PanelLayoutControls({
       className="flex h-full shrink-0 items-center gap-1 [-webkit-app-region:no-drag]"
       data-panel-layout-controls
     >
+      {showWorkspaceLayoutControl && workspaceLayout && onWorkspaceLayoutChange ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <ToggleGroup
+                className="mr-1 shrink-0 [-webkit-app-region:no-drag]"
+                aria-label="Layout"
+                value={[workspaceLayout]}
+                onValueChange={(next) => {
+                  const layout = next[0];
+                  if (layout === "agents" || layout === "editor") onWorkspaceLayoutChange(layout);
+                }}
+              >
+                <ToggleGroupItem value="agents">Agents</ToggleGroupItem>
+                <ToggleGroupItem value="editor">Editor</ToggleGroupItem>
+              </ToggleGroup>
+            }
+          />
+          <TooltipPopup side="bottom">
+            Switch layout{workspaceLayoutShortcutLabel ? ` (${workspaceLayoutShortcutLabel})` : ""}
+          </TooltipPopup>
+        </Tooltip>
+      ) : null}
       {showThreadPanelControl ? threadPanelControl : null}
       {showTerminalControl ? (
         <Tooltip>
@@ -184,7 +218,12 @@ export function ThreadPanelHeaderControl(props: PanelLayoutControlsProps) {
       )}
       data-workspace-titlebar-controls
     >
-      <PanelLayoutControls {...props} showTerminalControl={false} showRightPanelControl={false} />
+      <PanelLayoutControls
+        {...props}
+        showTerminalControl={false}
+        showRightPanelControl={false}
+        showWorkspaceLayoutControl={false}
+      />
     </div>
   );
 }

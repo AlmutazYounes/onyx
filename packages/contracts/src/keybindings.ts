@@ -71,6 +71,7 @@ export const STATIC_KEYBINDING_COMMANDS = [
   "threadPanel.toggle",
   "rightPanel.toggleMaximized",
   "rightPanel.close",
+  "workspace.toggleLayout",
   "view.reopenClosed",
   "pullRequest.copyNumber",
   "diff.toggle",

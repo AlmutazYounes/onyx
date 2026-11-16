@@ -17,6 +17,10 @@
       "vite": { "entry": [".github/**/*.test.cjs"] },
       "vitest": { "entry": [".github/**/*.test.cjs"] },
     },
+    "evals": {
+      // Eval cases are sample projects for the agent to work in, not code this repo runs.
+      "ignore": ["local-agent/cases/**"],
+    },
     "scripts": {
       // Knip loads its preprocessor through a CLI option; native verification and
       // worktree setup (from t3.json) run directly. release-desktop.yml bundles the

@@ -114,7 +114,7 @@ function createWindow(
     resizable: false,
     show: false,
     skipTaskbar: true,
-    title: "L3 Snapshot Animation",
+    title: "Onyx Snapshot Animation",
     transparent: true,
     webPreferences: {
       backgroundThrottling: false,

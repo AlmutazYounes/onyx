@@ -81,6 +81,7 @@ import {
   UserPlusIcon,
 } from "lucide-react";
 import { openThreadFind } from "./chat/threadFindStore";
+import { requestWorkspaceLayoutToggle } from "../workspaceLayout";
 import { dispatchPreviewAction } from "./preview/previewActionBus";
 import { previewBridge } from "./preview/previewBridge";
 import {
@@ -1360,7 +1361,7 @@ function OpenCommandPaletteDialog(props: {
       value: "action:triage",
       searchTerms: ["triage", "bug", "issue", "report", "broken", "debug", "help", "support"],
       title: "Triage an issue",
-      description: "An agent investigates a L3 problem and helps file an issue",
+      description: "An agent investigates an Onyx problem and helps file an issue",
       icon: <BugIcon className={ITEM_ICON_CLASS} />,
       run: () => startTriage(triageEnvironmentId),
     });
@@ -1376,6 +1377,20 @@ function OpenCommandPaletteDialog(props: {
       shortcutCommand: "chat.find",
       run: async () => {
         openThreadFind(activeThreadKey);
+      },
+    });
+  }
+
+  if (activeThreadKey !== null) {
+    actionItems.push({
+      kind: "action",
+      value: "action:toggle-workspace-layout",
+      title: "Switch between agents and editor layout",
+      searchTerms: ["layout", "editor", "agents", "view", "explorer", "ide", "cursor"],
+      icon: <MonitorIcon className={ITEM_ICON_CLASS} />,
+      shortcutCommand: "workspace.toggleLayout",
+      run: async () => {
+        requestWorkspaceLayoutToggle();
       },
     });
   }
@@ -1675,7 +1690,7 @@ function OpenCommandPaletteDialog(props: {
       "openclaw",
       "hermes",
     ],
-    title: "Use L3 in another app (MCP)",
+    title: "Use Onyx in another app (MCP)",
     icon: <PlugIcon className={ITEM_ICON_CLASS} />,
     run: async () => {
       openUseInAnotherApp(

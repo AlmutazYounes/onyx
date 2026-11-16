@@ -41,7 +41,7 @@ const share = (tokens: number, total: number) =>
   total > 0 ? `${((tokens / total) * 100).toFixed(1)}%` : "0%";
 
 /** What fills the local model's context on this thread, and the tools it can call. */
-/** Falls back to the provider's own context row until L3 has measured a request. */
+/** Falls back to the provider's own context row until Onyx has measured a request. */
 export function ThreadDetailsModelContext({
   environmentId,
   threadId,
@@ -190,7 +190,8 @@ function ContextRow({
 }
 
 // Each thread's own T3 MCP server is named after the thread; show what it is instead.
-const groupLabel = (name: string) => (name.startsWith("t3-code-") ? "L3 (this thread)" : name);
+const groupLabel = (name: string) =>
+  name.startsWith("t3-code-") ? "Onyx (this thread)" : name === "onyx" ? "Onyx code search" : name;
 const BROWSER_GROUP = "browser";
 // Lean: skills off (the default), plus web access and the shared browser.
 const LEAN_ITEMS: L3AgentItems = {

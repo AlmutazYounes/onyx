@@ -113,6 +113,27 @@ function nativeReadOutput(output: string): string {
   return envelope === null ? output : envelope[1] + body.slice(envelope[0].length);
 }
 
+/**
+ * The lines a read returned, from OpenCode's "lines 140-160" header or else its numbered lines, so
+ * the label shows what the model actually got rather than what it asked for.
+ */
+export function openCodeReadRange(output: string | undefined): string | undefined {
+  if (!output) return undefined;
+  const header = /^Read file [^\n]*?, lines (\d+)-(\d+)/.exec(output);
+  if (header) return `L${header[1]}-${header[2]}`;
+  const numbered = [...output.matchAll(/^(\d+): /gm)];
+  const first = numbered[0]?.[1];
+  const last = numbered.at(-1)?.[1];
+  return first && last ? `L${first}-${last}` : undefined;
+}
+
+// The row names the file and its lines; the full path stays in the row's input.
+const readFileName = (path: string) =>
+  path
+    .replace(/[\\/]+$/, "")
+    .split(/[\\/]/)
+    .at(-1) || path;
+
 /** OpenCode's shell tool succeeds when the command exits non-zero. */
 export function openCodeCommandFailed(toolName: string, completedMetadata: unknown): boolean {
   const exitCode = recordNumber(completedMetadata, "exit", "exitCode");
@@ -226,7 +247,9 @@ export function openCodeToolTurnItem(
         ...base,
         title:
           tool.name.toLowerCase() === "read" && readPath !== undefined
-            ? formatReadToolLabel(readPath)
+            ? [formatReadToolLabel(readFileName(readPath)), openCodeReadRange(output)]
+                .filter(Boolean)
+                .join(" ")
             : base.title,
         type: "dynamic_tool",
         toolName: tool.name,

@@ -21,7 +21,7 @@ export function mobileClientPlatformLabel(device: RelayClientDeviceRecord): stri
       : device.iosMajorVersion === null
         ? "iOS"
         : `iOS ${device.iosMajorVersion}`;
-  return `${platform}${device.appVersion ? ` · L3 ${device.appVersion}` : ""}`;
+  return `${platform}${device.appVersion ? ` · Onyx ${device.appVersion}` : ""}`;
 }
 
 export function mobileClientNotificationDetail(device: RelayClientDeviceRecord): string {

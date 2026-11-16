@@ -679,6 +679,23 @@ export function toolGroupSummaryKind(
   return fallbackKinds.size === 1 ? fallbackKinds.values().next().value! : "mixed";
 }
 
+/**
+ * The latest part of a thought as it streams. Providers that write bold-headed summaries keep the
+ * heading; raw reasoning shows its newest words, so the row moves as the model thinks.
+ */
+export function liveThoughtTail(markdown: string, maxChars = 280): string {
+  if (/^\s*\*\*[^*\r\n]+\*\*[ \t]*\r?(?:\n|$)/.test(markdown)) return liveThoughtLine(markdown);
+  const text = markdown
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/`+|\*\*|~~/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (text.length <= maxChars) return text;
+  const tail = text.slice(-maxChars);
+  const wordStart = tail.indexOf(" ");
+  return `…${wordStart > 0 && wordStart < 40 ? tail.slice(wordStart + 1) : tail}`;
+}
+
 export function liveThoughtLine(markdown: string): string {
   const heading = /^\s*\*\*([^*\r\n]+)\*\*[ \t]*\r?(?:\n|$)/.exec(markdown)?.[1];
   const text = (heading ?? markdown)

@@ -1,0 +1,17 @@
+{
+  "source": "Long task: reads more than a local model's context holds, so it depends on compaction and context use",
+  "checkout": "dfc2177e",
+  "prompt": "Write docs/opencode-server-files.md. For every .ts file directly in packages/provider-opencode/src/server, except tests and adapter.ts, add a short section headed with the file name that says what the file does and names its main exported function, class or constant. Do not change any other files.",
+  "criteria": [
+    {
+      "name": "a section with a real export for each file",
+      "tests": "python3 check/check.py",
+      "weight": 4
+    },
+    {
+      "name": "changed only the new doc",
+      "check": "test -z \"$(git status --porcelain | grep -vE 'docs/opencode-server-files.md|docs/$|check/$')\"",
+      "guard": true
+    }
+  ]
+}

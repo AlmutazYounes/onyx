@@ -29,6 +29,10 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   // Listing models spends the stored API key, so only those who can choose a model may.
   [WS_METHODS.serverListTextGeneratorModels]: AuthSettingsWriteScope,
   [WS_METHODS.serverRefreshProviders]: AuthOrchestrationReadScope,
+  // Loads a model into memory and can evict the one agents are using.
+  [WS_METHODS.serverMeasureLocalModel]: AuthOrchestrationOperateScope,
+  // Unloading mid-reply interrupts an agent, as stopping a turn does.
+  [WS_METHODS.serverSetLocalModelLoaded]: AuthOrchestrationOperateScope,
   [WS_METHODS.pullRequestsRunAction]: AuthSourceControlWriteScope,
   [WS_METHODS.pullRequestsUpdate]: AuthSourceControlWriteScope,
   [WS_METHODS.pullRequestsComment]: AuthSourceControlWriteScope,

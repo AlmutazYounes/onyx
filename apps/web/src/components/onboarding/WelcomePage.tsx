@@ -271,7 +271,9 @@ export function WelcomePage({
         {isElectron ? <WorkspacePageHeader electron /> : null}
         <div className="min-h-0 flex-1 overflow-y-auto scrollbar-gutter-both">
           <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-6 pt-12 pb-8 sm:pt-20">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Welcome to L3</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              Welcome to Onyx
+            </h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
               Setting up <span className="text-foreground">{label}</span>.
             </p>
@@ -325,7 +327,7 @@ export function WelcomePage({
 function TelemetryNotice() {
   return (
     <p className="mt-auto pt-12 text-2xs leading-relaxed text-muted-foreground/70">
-      L3 runs on a model on this Mac and sends no usage data.
+      Onyx runs on a model on this Mac and sends no usage data.
     </p>
   );
 }
@@ -910,7 +912,7 @@ function PhoneSection({ environmentId }: { readonly environmentId: EnvironmentId
             <SmartphoneIcon className="size-4" />
           </RowIcon>
           <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
-            Use L3 on your phone
+            Use Onyx on your phone
           </span>
           <CollapsibleTrigger render={<Button variant="ghost-muted" size="xs" />}>
             {open ? "Hide" : "Set up"}
@@ -934,7 +936,7 @@ function PhoneSection({ environmentId }: { readonly environmentId: EnvironmentId
                 size={124}
                 level="M"
                 marginSize={2}
-                title="L3 app for iPhone and Android"
+                title="Onyx app for iPhone and Android"
               />
             </div>
           </div>
@@ -1428,7 +1430,7 @@ function useProjectImport({
       })),
     ),
   );
-  // Projects already in L3 stay in the list, but reopening the page does not import their
+  // Projects already in Onyx stay in the list, but reopening the page does not import their
   // history again unless the user picks them. The scan can be 30 s old, so the live list decides.
   const projects = useProjects();
   const isNewProject = isNewOnboardingProject(projects);

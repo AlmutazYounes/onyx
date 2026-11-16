@@ -541,7 +541,7 @@ export const make = Effect.fn("ProviderMaintenanceRunner.make")(function* () {
                   message:
                     targetVersion !== undefined
                       ? "This version is no longer recommended or this installer cannot install a specific version. Refresh provider settings."
-                      : "The latest provider version is incompatible with this L3 release. Review provider settings.",
+                      : "The latest provider version is incompatible with this Onyx release. Review provider settings.",
                 }),
               );
             }
@@ -656,9 +656,9 @@ export const make = Effect.fn("ProviderMaintenanceRunner.make")(function* () {
                 startedAt,
                 finishedAt,
                 message: couldNotVerify
-                  ? "Update command completed, but L3 could not verify the provider version."
+                  ? "Update command completed, but Onyx could not verify the provider version."
                   : stillOutdated
-                    ? "Update command completed, but L3 still detects an outdated provider version."
+                    ? "Update command completed, but Onyx still detects an outdated provider version."
                     : needsOpenCodeServerRestart(verifiedProviders)
                       ? OPENCODE_SERVER_RESTART_MESSAGE
                       : "Provider updated.",

@@ -1,0 +1,21 @@
+{
+  "source": "Edit in a large repo: the change must land where the value is defined, not in a copy; the context-breakdown test holds the real size as a literal, so updating it is allowed",
+  "checkout": "dfc2177e",
+  "prompt": "Onyx's local model should use a 32K-token context window instead of 64K. Make that change everywhere it is configured.",
+  "criteria": [
+    {
+      "name": "changed the value where it is defined",
+      "check": "grep -qE 'L3_LOCAL_CONTEXT_TOKENS = 32_?768' packages/contracts/src/l3Local.ts",
+      "weight": 2
+    },
+    {
+      "name": "kept the setup script default in step",
+      "check": "grep -qE 'L3_CONTEXT:-32768' scripts/l3-setup.sh"
+    },
+    {
+      "name": "changed no unrelated files",
+      "check": "test -z \"$(git diff --name-only | grep -vE '^(packages/contracts/src/l3Local(\\.test)?\\.ts|packages/provider-opencode/src/server/L3ContextBreakdown\\.test\\.ts|scripts/l3-setup\\.sh|README\\.md)$')\"",
+      "guard": true
+    }
+  ]
+}

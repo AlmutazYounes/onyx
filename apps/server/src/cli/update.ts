@@ -447,8 +447,8 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
       : executableCurrent
         ? `Updating the background service ${serviceVersion ?? "(unknown version)"} -> ${targetVersion} (${targetChannel}).`
         : alreadyOnDisk
-          ? "Switching L3"
-          : "Updating L3",
+          ? "Switching Onyx"
+          : "Updating Onyx",
     executableCurrent
       ? ""
       : `${currentVersion} → ${targetVersion}${targetChannel === "stable" ? "" : ` (${targetChannel})`}`,
@@ -570,7 +570,7 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
     });
   }
 
-  progress.success(`Installed L3 ${targetVersion}`);
+  progress.success(`Installed Onyx ${targetVersion}`);
   if (Option.isSome(repointed)) {
     yield* Console.log("  Run t3 to get started.\n");
   } else {

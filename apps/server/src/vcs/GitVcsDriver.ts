@@ -1130,9 +1130,9 @@ export const makeVcsDriverShape = Effect.fn("makeGitVcsDriverShape")(function* (
         GIT_ALTERNATE_OBJECT_DIRECTORIES: quotedObjects.startsWith('"')
           ? quotedObjects
           : `"${quotedObjects}"`,
-        GIT_AUTHOR_NAME: "L3",
+        GIT_AUTHOR_NAME: "Onyx",
         GIT_AUTHOR_EMAIL: "t3code@users.noreply.github.com",
-        GIT_COMMITTER_NAME: "L3",
+        GIT_COMMITTER_NAME: "Onyx",
         GIT_COMMITTER_EMAIL: "t3code@users.noreply.github.com",
       };
 

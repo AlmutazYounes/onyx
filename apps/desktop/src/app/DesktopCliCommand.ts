@@ -301,7 +301,7 @@ export const make = Effect.gen(function* () {
       // PATH would split the folder at the `;`, leaving two wrong entries behind.
       if (binDirectory.includes(";")) {
         return yield* fail(
-          `L3 cannot put ${binDirectory} on PATH because it has a ";". Run ${launcher} directly.`,
+          `Onyx cannot put ${binDirectory} on PATH because it has a ";". Run ${launcher} directly.`,
         );
       }
       const entries = pathEntries(yield* readUserPath, ";");
@@ -400,15 +400,15 @@ export const make = Effect.gen(function* () {
       return yield* fail("Install the t3 command first.");
     }
     const setup = startupLine(installed.value);
-    if (setup === undefined) return yield* fail("L3 cannot add t3 to this shell's PATH.");
+    if (setup === undefined) return yield* fail("Onyx cannot add t3 to this shell's PATH.");
     const shadowedBy = yield* foreignFirstOnPath;
     if (Option.isSome(shadowedBy)) {
-      return yield* fail(`Another t3 at ${shadowedBy.value} runs first; L3 leaves it in place.`);
+      return yield* fail(`Another t3 at ${shadowedBy.value} runs first; Onyx leaves it in place.`);
     }
     if (!(yield* folderOnPath(installed.value)) && !(yield* hasLine(setup))) {
       yield* fs.makeDirectory(path.dirname(setup.path), { recursive: true }).pipe(
         Effect.andThen(
-          fs.writeFileString(setup.path, `\n# Added by L3\n${setup.line}\n`, { flag: "a" }),
+          fs.writeFileString(setup.path, `\n# Added by Onyx\n${setup.line}\n`, { flag: "a" }),
         ),
         Effect.mapError(() => fail(`Could not add t3 to ${setup.file}.`)),
       );
@@ -418,7 +418,7 @@ export const make = Effect.gen(function* () {
 
   const installOnFirstLaunch: DesktopCliCommand["Service"]["installOnFirstLaunch"] = Effect.gen(
     function* () {
-      // L3 runs beside T3 Code, which owns the `t3` command; install it from Settings if wanted.
+      // Onyx runs beside T3 Code, which owns the `t3` command; install it from Settings if wanted.
       if (L3_SKIP_FIRST_LAUNCH_CLI) return;
       if (!environment.isPackaged || (yield* exists(firstLaunchMarker))) return;
       // Mark first so a failed or removed install is never retried behind the user's back.
@@ -431,7 +431,7 @@ export const make = Effect.gen(function* () {
       if (existing !== undefined) {
         const target = yield* fs.readLink(existing).pipe(Effect.option);
         if (Option.getOrUndefined(target) !== launcher) {
-          return yield* logInfo("left another L3 app's t3 command in place", {
+          return yield* logInfo("left another Onyx app's t3 command in place", {
             existing,
           });
         }

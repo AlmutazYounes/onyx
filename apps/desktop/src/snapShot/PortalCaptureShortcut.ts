@@ -162,7 +162,7 @@ export class PortalCaptureShortcut {
     if (this.managedByHyprland)
       throw new Error("Change the capture binding in your Hyprland config, then save it.");
     if (!this.hasSession || this.version < 2)
-      throw new Error("Open your desktop's shortcut settings and allow L3's capture shortcut.");
+      throw new Error("Open your desktop's shortcut settings and allow Onyx's capture shortcut.");
     await this.call({
       destination: this.owner,
       path: PATH,
@@ -189,7 +189,7 @@ export class PortalCaptureShortcut {
       shortcutPending: false,
       shortcutCanRetry: !this.managedByHyprland,
       shortcutMessage: this.managedByHyprland
-        ? "Couldn't connect to Hyprland shortcuts. Make sure xdg-desktop-portal-hyprland is running, then restart L3."
+        ? "Couldn't connect to Hyprland shortcuts. Make sure xdg-desktop-portal-hyprland is running, then restart Onyx."
         : error instanceof Error
           ? error.message
           : "Could not register the capture shortcut.",
@@ -329,7 +329,7 @@ export class PortalCaptureShortcut {
             shortcutMessage:
               this.version >= 2
                 ? "Shortcut permission wasn't granted. Open shortcut permissions to allow it."
-                : "Shortcut permission wasn't granted. Allow L3 in your desktop's shortcut settings.",
+                : "Shortcut permission wasn't granted. Allow Onyx in your desktop's shortcut settings.",
           });
           return undefined;
         }
@@ -354,7 +354,7 @@ export class PortalCaptureShortcut {
         shortcutPending: false,
         shortcutMessage: shortcut
           ? "Managed by Hyprland. Add the binding to your config and save it."
-          : "Hyprland did not register the capture action. Check that xdg-desktop-portal-hyprland is running, then restart L3.",
+          : "Hyprland did not register the capture action. Check that xdg-desktop-portal-hyprland is running, then restart Onyx.",
       });
       return;
     }

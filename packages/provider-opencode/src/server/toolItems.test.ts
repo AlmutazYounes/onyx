@@ -7,7 +7,51 @@ import {
   toolOutputImages,
 } from "@t3tools/shared/toolOutput";
 
-import { openCodeToolOutput, openCodeToolTurnItem } from "./toolItems.ts";
+import { openCodeReadRange, openCodeToolOutput, openCodeToolTurnItem } from "./toolItems.ts";
+
+describe("openCodeReadRange", () => {
+  it.each([
+    ["Read file /repo/a.ts, lines 140-160\n140: x\n160: y", "L140-160"],
+    [
+      "<path>/repo/a.ts</path>\n<type>file</type>\n<content>\n1: a\n2: b\n54: c\n</content>",
+      "L1-54",
+    ],
+    ["Read directory /repo\nsrc/\nREADME.md", undefined],
+    [undefined, undefined],
+  ])("reads the returned lines from %j", (output, expected) => {
+    expect(openCodeReadRange(output)).toBe(expected);
+  });
+});
+
+describe("OpenCode read rows", () => {
+  it("name the file and the lines the model got", () => {
+    const item = openCodeToolTurnItem(
+      {
+        id: TurnItemId.make("read-item"),
+        threadId: ThreadId.make("thread"),
+        runId: null,
+        nodeId: null,
+        providerThreadId: null,
+        providerTurnId: null,
+        nativeItemRef: null,
+        parentItemId: null,
+        ordinal: 0,
+        status: "completed",
+        title: "read",
+        startedAt: null,
+        completedAt: null,
+        updatedAt: DateTime.makeUnsafe("2026-11-16T00:00:00Z"),
+      },
+      {
+        name: "read",
+        input: { path: "/repo/web/styles.css", offset: 280 },
+        output: "Read file /repo/web/styles.css, lines 280-659\n280: .hero {}",
+        completedMetadata: undefined,
+      },
+    );
+    expect(item).toMatchObject({ type: "dynamic_tool", title: "Read styles.css L280-659" });
+  });
+});
 
 describe("openCodeToolOutput", () => {
   it("preserves inline raster file content and leaves other files unserved", () => {

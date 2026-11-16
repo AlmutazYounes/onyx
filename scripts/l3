@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Start L3: make sure the local model is up, build once if needed, then serve and open the app.
+# Start Onyx: make sure the local model is up, build once if needed, then serve and open the app.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export PATH="$(brew --prefix node)/bin:/opt/homebrew/bin:$PATH"
 
 if ! command -v ollama >/dev/null || ! command -v opencode >/dev/null; then
-  echo "L3 is not set up yet; running scripts/l3-setup.sh first."
+  echo "Onyx is not set up yet; running scripts/l3-setup.sh first."
   "$ROOT/scripts/l3-setup.sh"
 fi
 
@@ -18,21 +18,21 @@ if ! curl -fs http://127.0.0.1:11434/api/version >/dev/null; then
   done
 fi
 
-if ! ollama show l3-coder >/dev/null 2>&1; then
+if ! ollama show onyx-qwen >/dev/null 2>&1; then
   "$ROOT/scripts/l3-setup.sh"
 fi
 
 # Load the model now so the first prompt doesn't wait for 23 GB to come off disk.
 curl -fs http://127.0.0.1:11434/api/generate \
-  -d '{"model":"l3-coder","keep_alive":"30m"}' >/dev/null 2>&1 &
+  -d '{"model":"onyx-qwen","keep_alive":"30m"}' >/dev/null 2>&1 &
 
 if [ ! -f "$ROOT/apps/server/dist/bin.mjs" ] || [ "${L3_REBUILD:-0}" = "1" ]; then
-  echo "==> Building L3"
+  echo "==> Building Onyx"
   (cd "$ROOT/apps/server" && "$ROOT/node_modules/.bin/vp" run build)
 fi
 
 if [[ " $* " != *" --port "* ]] && lsof -nP -iTCP:3873 -sTCP:LISTEN >/dev/null 2>&1; then
-  echo "Port 3873 is in use, probably by the L3 desktop app. Quit it first; both share ~/.l3." >&2
+  echo "Port 3873 is in use, probably by the Onyx desktop app. Quit it first; both share ~/.l3." >&2
   exit 1
 fi
 

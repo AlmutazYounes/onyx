@@ -191,7 +191,11 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Partial<
     "opus-4.5-thinking": "claude-opus-4-5",
     "opus-4.5": "claude-opus-4-5",
   },
-  [OPENCODE_DRIVER_KIND]: {},
+  // Onyx's local models before they were renamed; threads that chose them keep resolving.
+  [OPENCODE_DRIVER_KIND]: {
+    "l3/l3-coder": "l3/onyx-qwen",
+    "l3/l3-laguna": "l3/onyx-laguna",
+  },
 };
 
 export const PROVIDER_DISPLAY_NAMES: Partial<Record<ProviderDriverKind, string>> = {

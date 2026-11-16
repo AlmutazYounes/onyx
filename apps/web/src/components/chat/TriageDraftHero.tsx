@@ -31,7 +31,7 @@ export function TriageDraftHero(props: {
             )}
           </TooltipTrigger>
           <TooltipPopup side="bottom">
-            The agent reads L3's logs and source here, and asks before it applies a fix or posts
+            The agent reads Onyx's logs and source here, and asks before it applies a fix or posts
             anything.
           </TooltipPopup>
         </Tooltip>

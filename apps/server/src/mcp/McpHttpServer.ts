@@ -118,7 +118,7 @@ const unauthorized = (input: {
   return HttpServerResponse.jsonUnsafe(
     {
       error: "invalid_mcp_credential",
-      message: "A valid L3 MCP credential is required.",
+      message: "A valid Onyx MCP credential is required.",
     },
     {
       status: 401,
@@ -1329,7 +1329,7 @@ export const layerInProcessMcpServer = McpServer.middleware<{
 
 export const layerMcpTransport = <RA, RE, RR>(registrations: Layer.Layer<RA, RE, RR>) =>
   McpServer.layerHttp({
-    name: "L3",
+    name: "Onyx",
     version: packageJson.version,
     path: MCP_HTTP_PATH,
     // The first protocol is the fallback for clients that offer an unknown version.

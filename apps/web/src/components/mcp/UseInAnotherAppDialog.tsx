@@ -76,7 +76,7 @@ export function UseInAnotherAppDialogHost() {
 
 function UseInAnotherAppDialog({ requested }: { readonly requested: EnvironmentId | null }) {
   const { environment, label } = useAccessEnvironment(requested);
-  const title = `Use L3 in another app (MCP) · ${label ?? "L3"}`;
+  const title = `Use Onyx in another app (MCP) · ${label ?? "Onyx"}`;
   return (
     <Dialog open onOpenChange={(open) => (open ? undefined : close())}>
       <WizardPopup>
@@ -411,7 +411,7 @@ function GateScreen({
         </GateMessage>
       );
     case "update":
-      return <GateMessage title={`Update L3 on ${name}`} />;
+      return <GateMessage title={`Update Onyx on ${name}`} />;
     case "no-relay-read":
       return (
         <GateMessage
@@ -470,7 +470,7 @@ function GateScreen({
           ) : (
             <div className="space-y-2 text-sm">
               <CommandBlock command="t3 connect link" />
-              <p>Restart L3 on {name}.</p>
+              <p>Restart Onyx on {name}.</p>
               {checkAgain}
             </div>
           )}

@@ -660,7 +660,7 @@ async function persistScopedSettingsPlan(
       return [
         {
           ...environment,
-          message: "This environment does not support this setting. Update L3 on it.",
+          message: "This environment does not support this setting. Update Onyx on it.",
         },
       ];
     }

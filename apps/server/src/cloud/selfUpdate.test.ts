@@ -26,7 +26,7 @@ import * as ServerSelfUpdate from "./selfUpdate.ts";
 
 interface HarnessOptions {
   readonly mode?: "web" | "desktop";
-  /** L3 refuses upstream releases unless allowed; the update flow tests opt in. */
+  /** Onyx refuses upstream releases unless allowed; the update flow tests opt in. */
   readonly allowUpstreamUpdates?: boolean;
   readonly managed?: boolean;
   readonly launcherProtocol?: 3 | typeof SERVICE_LAUNCHER_PROTOCOL;
@@ -252,14 +252,14 @@ it.layer(NodeServices.layer)("server self update", (it) => {
   );
 
   // regression: #5181 make remote updates rollback-safe
-  it.effect("refuses upstream T3 Code releases unless L3 allows them", () =>
+  it.effect("refuses upstream T3 Code releases unless Onyx allows them", () =>
     Effect.gen(function* () {
       const service = yield* makeHarness({ allowUpstreamUpdates: false });
       const desktop = yield* makeHarness({ mode: "desktop", allowUpstreamUpdates: false });
       for (const harness of [service, desktop]) {
         expect(
           (yield* harness.selfUpdate.update({ targetVersion: "1.1.0" }).pipe(Effect.flip)).reason,
-        ).toContain("L3 does not install T3 Code releases");
+        ).toContain("Onyx does not install T3 Code releases");
       }
       expect([...service.order, ...desktop.order]).toEqual([]);
     }),

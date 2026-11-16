@@ -8,7 +8,7 @@ export const RESOURCE_MONITOR_PROTOCOL_VERSION = 3 as const;
 
 const UnitInterval = Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 }));
 
-/** The model L3 serves through Ollama, and how fast it is generating. */
+/** The model Onyx serves through Ollama, and how fast it is generating. */
 export const LocalModelStats = Schema.Struct({
   name: TrimmedNonEmptyString,
   /** Weights and cache Ollama holds for the loaded model; null while unloaded. */
@@ -57,11 +57,30 @@ export const ModelContextBreakdown = Schema.Struct({
     }),
   ),
   memoryFiles: Schema.Array(Schema.String),
+  /** The thread's newest model request: reading the prompt until the first token, then writing. */
+  live: Schema.optional(
+    Schema.Struct({
+      startedAt: NonNegativeInt,
+      firstTokenAt: Schema.NullOr(NonNegativeInt),
+      lastTokenAt: Schema.NullOr(NonNegativeInt),
+      finishedAt: Schema.NullOr(NonNegativeInt),
+      promptTokens: NonNegativeInt,
+      tokens: NonNegativeInt,
+    }),
+  ),
 });
 export type ModelContextBreakdown = typeof ModelContextBreakdown.Type;
 
 export const ServerGetModelContextInput = Schema.Struct({ threadId: TrimmedNonEmptyString });
 export type ServerGetModelContextInput = typeof ServerGetModelContextInput.Type;
+
+/** One group's part of the machine: Onyx itself, or the local model it runs. */
+export const HostUsageShare = Schema.Struct({
+  cpu: UnitInterval,
+  memoryBytes: NonNegativeInt,
+  gpu: Schema.NullOr(UnitInterval),
+});
+export type HostUsageShare = typeof HostUsageShare.Type;
 
 export const HostResourcesSnapshot = Schema.Struct({
   sampledAt: NonNegativeInt,
@@ -72,6 +91,10 @@ export const HostResourcesSnapshot = Schema.Struct({
   // Optional so older servers and clients still decode each other's snapshots.
   gpuUtilization: Schema.optional(Schema.NullOr(UnitInterval)),
   localModel: Schema.optional(Schema.NullOr(LocalModelStats)),
+  /** What Onyx and the local model use; the rest of the totals is other apps. */
+  usage: Schema.optional(
+    Schema.NullOr(Schema.Struct({ onyx: HostUsageShare, model: HostUsageShare })),
+  ),
 });
 export type HostResourcesSnapshot = typeof HostResourcesSnapshot.Type;
 

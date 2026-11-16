@@ -2767,8 +2767,8 @@ export function resolvePackageManagerUserAgent(packageManager: string): string {
 
 export function resolveDesktopProductName(version: string): string {
   return resolveDesktopUpdateChannel(version) === "nightly"
-    ? "L3 (Nightly)"
-    : (desktopPackageJson.productName ?? "L3");
+    ? "Onyx (Nightly)"
+    : (desktopPackageJson.productName ?? "Onyx");
 }
 
 export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
@@ -2791,7 +2791,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     afterPack: (yield* Path.Path).join(yield* RepoRoot, "scripts/prepare-server-compile-cache.cjs"),
     appId: DESKTOP_APP_ID,
     productName: resolveDesktopProductName(version),
-    artifactName: "L3-${version}-${arch}.${ext}",
+    artifactName: "Onyx-${version}-${arch}.${ext}",
     electronLanguages: [...DESKTOP_ELECTRON_LANGUAGES],
     files: [
       ...DESKTOP_FILE_EXCLUSIONS,
@@ -2844,7 +2844,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
         // macOS 26 offers Messages/Mail codes in every text field unless opted out.
         NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac: true,
         NSLocalNetworkUsageDescription:
-          "L3 connects to devices on your local network for remote environments and commands run by terminals and coding agents.",
+          "Onyx connects to devices on your local network for remote environments and commands run by terminals and coding agents.",
         NSCalendarsUsageDescription:
           "Commands you run in T3 Code may need access to your calendars.",
         NSCalendarsFullAccessUsageDescription:
@@ -2852,11 +2852,11 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
         NSCalendarsWriteOnlyAccessUsageDescription:
           "Commands you run in T3 Code may need to add events to your calendars.",
         NSScreenCaptureUsageDescription:
-          "L3 captures the active window when you use the window capture shortcut.",
+          "Onyx captures the active window when you use the window capture shortcut.",
         NSCameraUsageDescription:
-          "L3 lets commands run by terminals and coding agents use the camera.",
+          "Onyx lets commands run by terminals and coding agents use the camera.",
         NSMicrophoneUsageDescription:
-          "L3 lets commands run by terminals and coding agents use the microphone.",
+          "Onyx lets commands run by terminals and coding agents use the microphone.",
         // macOS lists an app under Default web browser only when it opens web
         // pages as documents as well as http and https links (see protocols).
         CFBundleDocumentTypes: [
@@ -2870,7 +2870,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       },
       protocols: [
         {
-          name: "L3",
+          name: "Onyx",
           schemes: ["l3", "l3-dev"],
         },
         {
@@ -2923,7 +2923,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       maintainer: "T3 Tools <hello@t3.codes>",
       protocols: [
         {
-          name: "L3",
+          name: "Onyx",
           schemes: ["l3", "l3-dev"],
         },
       ],
@@ -3923,7 +3923,7 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
     private: true,
     packageManager: rootPackageJson.packageManager,
     description:
-      "L3 is an open-source desktop app for coding agents. Work with your existing agent subscriptions, review code changes, and run commands in your projects. Connect from desktop, web, or mobile to continue working remotely.",
+      "Onyx is an open-source desktop app for coding agents. Work with your existing agent subscriptions, review code changes, and run commands in your projects. Connect from desktop, web, or mobile to continue working remotely.",
     license: "MIT",
     homepage: "https://t3.codes",
     author: "T3 Tools",

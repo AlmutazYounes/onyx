@@ -1,0 +1,16 @@
+{
+  "source": "README: the three-bug test project used to compare Qwen and Laguna",
+  "prompt": "The tests in this project fail. Find and fix the bugs in cart.js so that `npm test` passes. Do not change the tests.",
+  "criteria": [
+    {
+      "name": "visible tests pass",
+      "tests": "node --test --test-reporter=tap",
+      "weight": 3
+    },
+    {
+      "name": "left the tests alone",
+      "check": "git diff --quiet -- test",
+      "guard": true
+    }
+  ]
+}

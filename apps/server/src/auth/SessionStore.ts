@@ -58,7 +58,7 @@ export interface VerifiedSession {
   readonly scopes: ReadonlyArray<AuthEnvironmentScope>;
   readonly proofKeyThumbprint?: string;
   readonly runtimeModeCeiling?: RuntimeMode;
-  /** An MCP client that is another L3 environment's peer link. */
+  /** An MCP client that is another Onyx environment's peer link. */
   readonly peerLink?: true;
 }
 

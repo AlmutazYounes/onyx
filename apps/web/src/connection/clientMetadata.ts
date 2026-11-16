@@ -77,7 +77,7 @@ export function clientPresentationMetadata(input: {
 }): AuthClientPresentationMetadata {
   if (input.desktopBridge !== undefined) {
     return {
-      label: "L3 Desktop",
+      label: "Onyx Desktop",
       deviceType: "desktop",
       os: clientOsFromElectronPlatform(input.desktopBridge.getClientPlatform()),
       surface: "desktop",
@@ -86,7 +86,7 @@ export function clientPresentationMetadata(input: {
   }
 
   return {
-    label: "L3 Web",
+    label: "Onyx Web",
     deviceType: browserDeviceType(input.identity),
     os: browserClientOs(input.identity),
     surface: "web",

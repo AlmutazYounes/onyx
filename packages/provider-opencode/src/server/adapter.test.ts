@@ -3020,7 +3020,7 @@ describe("OpenCodeAdapterV2", () => {
         event.type === "turn_item.updated" ? [event.turnItem] : [],
       );
       const reads = items.filter((item) => item.type === "dynamic_tool");
-      assert.equal(reads[0]?.title, "Read src/env.ts");
+      assert.equal(reads[0]?.title, "Read env.ts");
       assert.deepEqual(
         reads.map((item) => ({ toolName: item.toolName, output: item.output })),
         [

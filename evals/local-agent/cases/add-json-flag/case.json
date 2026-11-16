@@ -1,0 +1,15 @@
+{
+  "source": "Feature task: one flag added end to end, checked by tests the agent never sees",
+  "prompt": "Add a `--json` flag to count.js. With it, the tool prints only a JSON object like {\"lines\": 2, \"words\": 3}. The flag may come before or after the file name. Without it, keep the current output. Mention the flag in README.md.",
+  "criteria": [
+    {
+      "name": "hidden tests for the flag",
+      "tests": "node --test --test-reporter=tap check/*.test.mjs",
+      "weight": 3
+    },
+    {
+      "name": "README mentions --json",
+      "check": "grep -q -- --json README.md"
+    }
+  ]
+}

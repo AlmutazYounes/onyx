@@ -197,7 +197,7 @@ function FirstRunRecovery({
         <p className="mt-2 text-sm text-muted-foreground">
           {settingsReadFailed
             ? "Your saved settings could not be loaded."
-            : "L3 could not confirm this workspace."}
+            : "Onyx could not confirm this workspace."}
         </p>
         <Button
           className="mt-5"

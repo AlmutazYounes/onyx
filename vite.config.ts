@@ -11,6 +11,8 @@ const TEST_EXCLUDE = [
   "**/dist/**",
   "**/dist-electron/**",
   "**/.{idea,git,cache,output,temp}/**",
+  // The local-agent eval's sample projects ship deliberately failing tests.
+  "**/local-agent/cases/**",
 ];
 
 // Directories whose tests belong to a package's own test config. desktop also
@@ -200,6 +202,7 @@ export default defineConfig({
       "apps/mobile/modules/t3-highlights/cpp/generated/**",
       "apps/mobile/modules/t3-highlights/nitrogen/generated/**",
       "*.icon/**",
+      "evals/local-agent/cases/**",
     ],
     sortPackageJson: {},
     overrides: [
@@ -228,6 +231,8 @@ export default defineConfig({
       "apps/mobile/android/**",
       "apps/mobile/ios/**",
       "apps/mobile/uniwind-types.d.ts",
+      // Sample projects with deliberate bugs, written as a user's code would be.
+      "evals/local-agent/cases/**",
     ],
     plugins: ["eslint", "oxc", "react", "unicorn", "typescript"],
     jsPlugins: ["./oxlint-plugin-t3code/index.ts", "@shadcn/lint"],

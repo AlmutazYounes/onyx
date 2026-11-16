@@ -34,7 +34,7 @@ export function MultipleAccountsNote({
       <InfoIcon aria-hidden />
       <AlertDescription>
         <p>
-          We do not recommend managing multiple {providerName} accounts in L3.{" "}
+          We do not recommend managing multiple {providerName} accounts in Onyx.{" "}
           <a
             href={MULTIPLE_ACCOUNTS_FAQ_URL}
             target="_blank"

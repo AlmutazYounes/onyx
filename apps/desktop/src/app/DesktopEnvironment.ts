@@ -85,7 +85,7 @@ export class DesktopEnvironment extends Context.Service<
   }
 >()("@t3tools/desktop/app/DesktopEnvironment") {}
 
-const APP_BASE_NAME = "L3";
+const APP_BASE_NAME = "Onyx";
 
 function resolveDesktopAppStageLabel(input: {
   readonly isDevelopment: boolean;

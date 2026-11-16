@@ -4,10 +4,12 @@ import type { WorktreeSetupSnapshot } from "@t3tools/contracts";
 import { type ToolActivityIcon } from "@t3tools/contracts";
 import {
   liveThoughtLine,
+  liveThoughtTail,
   resolveViewedImageAsset,
   workEntriesViewedImagePaths,
 } from "@t3tools/client-runtime/work-log/presentation";
 import { resolveWorkGroupScrollAnchor } from "@t3tools/client-runtime/work-log/scroll-anchor";
+import { useLiveModelStatus } from "./liveModelStatus";
 import { useAssetUrls } from "~/assets/assetUrls";
 import { observeResize } from "~/lib/observeResize";
 import { tickTextContent } from "~/lib/tickTextContent";
@@ -431,12 +433,13 @@ export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind:
   const ctx = use(TimelineRowCtx);
   const { isCompacting, isPreparingWorktree, liveAnswerPreview, providerStartingLabel } =
     use(TimelineRowActivityCtx);
-  if (isPreparingWorktree || isCompacting) return <WorkLogRow label="" />;
   // A failed group keeps this disclosure while an approval waits, but nothing is thinking then.
   const live = ctx.pendingApprovals.size === 0;
+  const modelStatus = useLiveModelStatus(ctx.threadRef, live);
+  if (isPreparingWorktree || isCompacting) return <WorkLogRow label="" />;
   const activity = (
     <LiveActivityRow
-      label={providerStartingLabel ?? row.label ?? liveAnswerPreview ?? "Thinking"}
+      label={providerStartingLabel ?? row.label ?? modelStatus ?? liveAnswerPreview ?? "Thinking"}
       iconName="brain"
       active={live}
       shimmer={live}
@@ -569,6 +572,7 @@ export function LiveWorkEntryTimelineRow({
   const threadTarget = useThreadReadTarget(row.entry, ctx.activeThreadEnvironmentId);
   const label = liveWorkEntryLabel(row.entry, ctx.workspaceRoot, row.active);
   const threadLabel = threadReadLabel(label, threadTarget);
+  const modelStatus = useLiveModelStatus(ctx.threadRef, row.active);
 
   const item = row.entry.projectedItem?.item;
   const pendingApproval =
@@ -576,9 +580,12 @@ export function LiveWorkEntryTimelineRow({
   if (pendingApproval) return <TimelinePendingApprovalRow approval={pendingApproval} />;
 
   const failed = workEntryDisplayIndicatesToolFailure(row.entry);
+  // While the model thinks, show its newest words so the row keeps moving.
   const thoughtLine =
     row.thought && !row.expanded
-      ? liveThoughtLine((row.thought.detail ?? "").slice(0, THOUGHT_PREVIEW_SOURCE_MAX_LENGTH))
+      ? row.active
+        ? liveThoughtTail(row.thought.detail ?? "")
+        : liveThoughtLine((row.thought.detail ?? "").slice(0, THOUGHT_PREVIEW_SOURCE_MAX_LENGTH))
       : "";
   const thoughtIsStatus = thoughtLine !== "" && row.entry === row.thought;
 
@@ -627,7 +634,7 @@ export function LiveWorkEntryTimelineRow({
         label={
           thoughtIsStatus ? (
             row.active ? (
-              "Thinking"
+              (modelStatus ?? "Thinking")
             ) : (
               "Thought"
             )

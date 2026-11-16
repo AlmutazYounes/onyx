@@ -1,0 +1,12 @@
+{
+  "source": "Hard: one feature across store, report, CLI and saved state, with time-based behavior; hidden tests grade each part",
+  "prompt": "Add stock reservations to this app.\n\n- `store.reserve(sku, qty, { minutes })` holds stock for a customer and returns a hold id (a string). Holds expire after `minutes` (default 30), measured with the store's `now`.\n- `store.release(id)` ends a hold early. It returns true, or false when the id is unknown or the hold already expired.\n- `store.available(sku)` is the stock minus active holds.\n- `reserve` and `remove` must not take more than is available, and their error message says how many are available.\n- The report gets an Available column after Stock.\n- The CLI gets `reserve <sku> <qty> [--minutes N]`, which prints only the hold id, and `release <id>`. Holds are saved with the rest of the stock, so they survive between CLI runs.\n\nKeep the tests passing, updating them where the feature changes what they check.",
+  "criteria": [
+    {
+      "name": "hidden tests for each part of the feature",
+      "tests": "node --test --test-reporter=tap check/*.test.js",
+      "weight": 5
+    },
+    { "name": "the project's own tests pass", "check": "node --test test/*.test.js", "guard": true }
+  ]
+}

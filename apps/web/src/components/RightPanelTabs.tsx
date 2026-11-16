@@ -174,7 +174,7 @@ function shouldOpenDefaultBrowserProfileFromMenuClick(pointerType: string | unde
 }
 
 const SURFACE_DISABLED_REASONS = {
-  browser: "Browser previews are only available in the L3 desktop app.",
+  browser: "Browser previews are only available in the Onyx desktop app.",
   terminal: "Terminal surfaces are only available from a project thread.",
   files: "Files are only available when a project is open.",
   diff: "Diff is only available for server threads in Git repositories.",
@@ -1530,7 +1530,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
         {ownsDesktopTitleBar ? (
           <span
             aria-hidden
-            className="pointer-events-none fixed top-[var(--workspace-controls-top)] right-[var(--workspace-controls-right)] h-[var(--workspace-topbar-height)] w-28 [-webkit-app-region:no-drag]"
+            className="pointer-events-none fixed top-[var(--workspace-controls-top)] right-[var(--workspace-controls-right)] h-[var(--workspace-topbar-height)] w-(--workspace-titlebar-controls-width) [-webkit-app-region:no-drag]"
           />
         ) : null}
       </div>

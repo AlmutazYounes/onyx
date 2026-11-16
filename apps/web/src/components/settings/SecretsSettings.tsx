@@ -44,7 +44,7 @@ export function SecretsSettingsPanel() {
       environment.serverConfig.secretProviderSettings !== true ? (
         <SettingsSection {...searchableSetting("secret-providers")}>
           <p className="px-4 py-3 text-sm text-muted-foreground">
-            Update L3 on {environment.label} to manage its secret providers.
+            Update Onyx on {environment.label} to manage its secret providers.
           </p>
         </SettingsSection>
       ) : connected ? (

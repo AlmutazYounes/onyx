@@ -74,3 +74,4 @@ export * from "./secretReference.ts";
 export * from "./settingsSecretValue.ts";
 export * from "./clientRpcPermissions.ts";
 export * from "./l3Local.ts";
+export * from "./localModels.ts";

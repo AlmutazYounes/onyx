@@ -27,7 +27,7 @@ declare const __T3CODE_TELEMETRY_CHANNEL__: ReleaseChannel | undefined;
 export const telemetryChannel: ReleaseChannel =
   typeof __T3CODE_TELEMETRY_CHANNEL__ === "undefined" ? "dev" : __T3CODE_TELEMETRY_CHANNEL__;
 
-// Off 3773 so L3 can run beside a real T3 Code install.
+// Off 3773 so Onyx can run beside a real T3 Code install.
 export const DEFAULT_PORT = 3873;
 
 export const RuntimeMode = Schema.Literals(["web", "desktop"]);

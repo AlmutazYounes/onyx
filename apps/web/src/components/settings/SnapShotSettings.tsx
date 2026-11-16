@@ -255,7 +255,7 @@ export function SnapShotSettings() {
   const shortcutStatus = recording
     ? "Press your shortcut. Esc cancels."
     : candidateConflict
-      ? `L3 already uses this for "${commandLabel(candidateConflict)}".`
+      ? `Onyx already uses this for "${commandLabel(candidateConflict)}".`
       : shortcutCheck.status === "checking"
         ? "Checking shortcut…"
         : shortcutCheck.availability

@@ -2344,7 +2344,7 @@ export function AboutSettingsPanel() {
           {...searchableSetting("privacy-policy")}
           description={
             telemetryOff === undefined
-              ? "How we handle your data, including the anonymous usage data L3 collects."
+              ? "How we handle your data, including the anonymous usage data Onyx collects."
               : `How we handle your data. ${telemetryOff}`
           }
           control={
@@ -2359,7 +2359,7 @@ export function AboutSettingsPanel() {
         />
         <SettingsRow
           {...searchableSetting("open-source-licenses")}
-          description="Notices for dependencies, assets, and optional tools used by L3."
+          description="Notices for dependencies, assets, and optional tools used by Onyx."
           control={
             <Button
               render={<Link to="/settings/open-source-licenses" />}

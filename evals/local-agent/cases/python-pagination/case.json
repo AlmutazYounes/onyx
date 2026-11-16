@@ -1,0 +1,16 @@
+{
+  "source": "Off-by-one bugs in a second language, so the set is not all JavaScript",
+  "prompt": "Pagination is broken: page 1 skips the first items and the page count is too low for a partial last page. Fix pages.py so `python3 -m unittest` passes. Do not change the tests.",
+  "criteria": [
+    {
+      "name": "tests pass",
+      "tests": "python3 \"$EVAL_TOOLS/pytap.py\" . 'test*.py'",
+      "weight": 3
+    },
+    {
+      "name": "left the tests alone",
+      "check": "git diff --quiet -- test_pages.py",
+      "guard": true
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "source": "Hard: debug from a customer report that names no files; two root causes in different modules, a misleading comment, and hidden tests",
+  "prompt": "Two complaints from the shop: Ada's invoice INV-1004 shows a subtotal of $13.14, but seven pens at $1.15 plus paper at $5.10 is $13.15. And `node src/cli.js report 2026-03` lists Linus's April invoice instead of the March ones. Find the root causes and fix them so every invoice and every month is right, not just these two. Keep the existing tests passing.",
+  "criteria": [
+    {
+      "name": "hidden tests for totals and months",
+      "tests": "node --test --test-reporter=tap check/*.test.js",
+      "weight": 4
+    },
+    {
+      "name": "existing tests still pass",
+      "check": "node --test test/*.test.js",
+      "guard": true
+    },
+    {
+      "name": "left the tests and data alone",
+      "check": "git diff --quiet -- test data",
+      "guard": true
+    }
+  ]
+}

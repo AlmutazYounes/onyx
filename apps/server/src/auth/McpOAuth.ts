@@ -87,7 +87,7 @@ export const protectedResourceMetadata = (
   authorization_servers: [urls.issuer],
   scopes_supported: MCP_OAUTH_SCOPES,
   bearer_methods_supported: ["header"],
-  resource_name: "L3",
+  resource_name: "Onyx",
 });
 
 export const authorizationServerMetadata = (
@@ -148,7 +148,7 @@ const ClientIdPayload = Schema.Struct({
   v: Schema.Literal(1),
   n: Schema.String,
   r: Schema.Array(Schema.String),
-  /** Registered as another L3 environment's peer link. */
+  /** Registered as another Onyx environment's peer link. */
   p: Schema.optionalKey(Schema.Literal(1)),
 });
 const decodeClientIdPayload = Schema.decodeUnknownOption(Schema.fromJsonString(ClientIdPayload));

@@ -1,21 +1,21 @@
-# L3
+# Onyx
 
-**L3 is T3 Code rewired to run entirely on a local model.** No subscriptions, no API keys, and
+**Onyx is T3 Code rewired to run entirely on a local model.** No subscriptions, no API keys, and
 your prompts and code stay on your Mac.
 
-T3 Code is only a control panel, so it needs a coding agent to do the work. L3 ships preconfigured
+T3 Code is only a control panel, so it needs a coding agent to do the work. Onyx ships preconfigured
 with [OpenCode](https://opencode.ai) as that agent. OpenCode talks to a model served by
 [Ollama](https://ollama.com) on `127.0.0.1:11434`.
 
-| Piece           | What L3 uses                                                                                                           |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Model           | Qwen 3.6 35B-A3B, Unsloth `UD-IQ3_S` GGUF (13.7 GB, MoE, ~3B active per token), wrapped as `l3-coder` with 64K context |
-| Model server    | Ollama (Metal), started as a login service                                                                             |
-| Agent / harness | OpenCode 2 with its own database (`~/.l3/opencode`), limited to the local `l3` provider                                |
-| Titles, commits | Text generator `l3-local` → the same Ollama endpoint                                                                   |
-| Data directory  | `~/.l3` (kept apart from any T3 Code install in `~/.t3`)                                                               |
-| Telemetry       | Off by default (`T3CODE_TELEMETRY_ENABLED=true` turns it back on)                                                      |
-| Auto-update     | Off (desktop updater and `t3` self-update), so T3 Code releases can't replace L3                                       |
+| Piece           | What Onyx uses                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Model           | Qwen 3.6 35B-A3B, Unsloth `UD-IQ3_S` GGUF (13.7 GB, MoE, ~3B active per token), wrapped as `onyx-qwen` with 128K context |
+| Model server    | Ollama (Metal), started as a login service                                                                               |
+| Agent / harness | OpenCode 2 with its own database (`~/.l3/opencode`), limited to the local `l3` provider                                  |
+| Titles, commits | Text generator `l3-local` → the same Ollama endpoint                                                                     |
+| Data directory  | `~/.l3` (kept apart from any T3 Code install in `~/.t3`)                                                                 |
+| Telemetry       | Off by default (`T3CODE_TELEMETRY_ENABLED=true` turns it back on)                                                        |
+| Auto-update     | Off (desktop updater and `t3` self-update), so T3 Code releases can't replace Onyx                                       |
 
 The model is sized for a 32 GB Apple Silicon Mac that also runs a browser, an editor and chat apps.
 The 4-bit build (`qwen3.6:35b-a3b`, 23 GB) fits on paper, but in practice it pushed the Mac into swap.
@@ -28,8 +28,54 @@ Measured on an M6 Mac mini with 32 GB: about 53 tokens/s generation, about 970 t
 reading (an agent's first turn waits about 10 s for its system prompt), 100% on the GPU, no swap growth.
 
 The thread details panel (right side, under the machine name) shows live CPU, RAM and GPU load and
-the model's tokens per second. L3 measures speed with a small loopback proxy between OpenCode and
+the model's tokens per second. Onyx measures speed with a small loopback proxy between OpenCode and
 Ollama.
+
+### Second model: Laguna XS 2.1 (US)
+
+Onyx also offers Poolside's Laguna XS 2.1, a US-made coding model with the same shape (33B total,
+3B active), when it is installed. Pick it per thread in the model picker. Install it with
+`L3_WITH_LAGUNA=1 scripts/l3-setup.sh` (about 15 GB).
+
+Measured on this Mac with the same 3-bit size class: 53–59 tok/s generation, ~800 tok/s prompt
+reading, and it fixed a three-bug test project in about 60 s, the same as Qwen. Poolside's own
+benchmarks put Qwen slightly ahead (SWE-bench Verified 73.4% vs 70.9%), so Qwen stays the default.
+Switching models in use reloads about 14 GB (a few seconds), and thread titles keep using
+`onyx-qwen`.
+
+**Settings → Local models** compares every installed model: size, active parameters,
+quantization, context, memory fit, and writing and reading speed on this Mac. **Measure speed**
+runs a short fixed test (a 4K-token prompt, 256 tokens written) through Ollama and keeps the result
+in `~/.l3/models/measurements.json`. Unmeasured models show estimates scaled from a measured one.
+
+### Context and warm starts
+
+`onyx-qwen` runs with a 128K context. Qwen caches only a quarter of its layers, so that costs about
+0.9 GB more than 64K, and long jobs finish without OpenCode summarizing the conversation midway. At
+64K a 50K-token task summarized twice, lost details and failed; at 128K it passed. Re-running
+`scripts/l3-setup.sh` moves an older install to 128K without downloading anything.
+
+Ollama normally unloads the model 5 idle minutes after a request, and the next turn then reloads it
+and re-reads the whole conversation. For 30 minutes after agents last used it, Onyx keeps the model
+loaded, so a thread picks up where it left off at once.
+
+### Reasoning: Thinking or Fast
+
+The model picker's Reasoning choice sets whether the model thinks before it answers. Thinking is
+the default. Fast skips it: on small tasks it finished about a quarter sooner with the same results,
+but in a large project it took more steps and failed more often, so keep Thinking for big jobs.
+
+A local model can get stuck thinking. When one reply thinks for more than 6,000 tokens without
+writing anything or using a tool, Onyx stops it and asks again with thinking off for that one
+step, so the turn carries on instead of stalling for minutes.
+
+### Code search
+
+OpenCode's own tools search one exact word at a time, which in a large project means many slow
+rounds and big results to read. Onyx adds `codebase_search` (an MCP server in the Onyx process):
+the agent passes several keywords at once and gets the most relevant file and line ranges, ranked.
+It runs `git grep` on the current files, so there is no index to build or keep fresh. Turn it off
+in the thread's Context panel under MCP servers ("Onyx code search").
 
 ### Lighter prompts
 
@@ -44,17 +90,17 @@ browser. `read`, `edit`, `write` and `shell` stay on.
 For a big job, press **Long task** (or type `/goal`) and describe what "done" means, for example
 `/goal a complete portfolio website with home, projects and contact pages that builds without
 errors`. The agent keeps working across turns until it judges the goal met; **Clear** stops it.
-L3 also gives the model standing instructions (`~/.l3/opencode/instructions.md`): plan with a
+Onyx also gives the model standing instructions (`~/.l3/opencode/instructions.md`): plan with a
 todo list, finish every item, verify by running the build or tests, and leave no stubs.
 
-## Use L3
+## Use Onyx
 
 ```bash
 scripts/l3-setup.sh   # once: Ollama, OpenCode, Node, the model, and dependencies
-scripts/l3            # build if needed, then start L3 and open it in the browser
+scripts/l3            # build if needed, then start Onyx and open it in the browser
 ```
 
-L3 listens on port 3873, so it can run beside T3 Code (3773). Run either the desktop app or
+Onyx listens on port 3873, so it can run beside T3 Code (3773). Run either the desktop app or
 `scripts/l3`, not both: they share `~/.l3` and its port.
 
 ### Desktop app
@@ -64,8 +110,8 @@ RUSTUP_TOOLCHAIN=1.95 PATH="$PWD/node_modules/.bin:$PATH" \
   node scripts/build-desktop-artifact.ts --platform mac --target dmg --arch arm64
 ```
 
-This writes `release/L3-<version>-arm64.dmg`. The build is unsigned, so the first time you open
-L3.app, right-click it and choose **Open**.
+This writes `release/Onyx-<version>-arm64.dmg`. The build is unsigned, so the first time you open
+Onyx.app, right-click it and choose **Open**.
 
 Codex and Claude are still available under **Settings → Providers** if you want to turn them on.
 

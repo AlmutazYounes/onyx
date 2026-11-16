@@ -70,8 +70,8 @@ export function RelayClientInstallDialog() {
           </DialogTitle>
           <DialogDescription>
             {isInstalling
-              ? "L3 is preparing this environment for secure access through T3 Connect."
-              : "L3 needs the relay client to make this environment available through T3 Connect."}
+              ? "Onyx is preparing this environment for secure access through T3 Connect."
+              : "Onyx needs the relay client to make this environment available through T3 Connect."}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel scrollFade={false}>
@@ -92,14 +92,14 @@ export function RelayClientInstallDialog() {
                 value={activeStepIndex + 1}
               />
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Keep L3 open while the relay client is installed.
+                Keep Onyx open while the relay client is installed.
               </p>
             </div>
           ) : (
             <div className="rounded-xl border border-border/70 bg-muted/35 p-3">
               <p className="text-sm font-medium text-foreground">Managed relay client</p>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                L3 will download and install version{" "}
+                Onyx will download and install version{" "}
                 {view.status === "confirming" ? view.version : ""} locally.
               </p>
             </div>

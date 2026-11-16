@@ -1,0 +1,27 @@
+{
+  "source": "Scope discipline: one real bug in a file full of tempting cleanups; credit for the fix, and separately for leaving the rest alone",
+  "prompt": "truncate(\"Hello world\", 5) returns \"Hello…\", which is 6 characters. It should never return more than max characters, ellipsis included. Fix it.",
+  "criteria": [
+    {
+      "name": "hidden tests for truncate",
+      "tests": "node --test --test-reporter=tap check/*.test.js",
+      "weight": 3
+    },
+    {
+      "name": "existing tests still pass",
+      "check": "node --test test/*.test.js",
+      "guard": true
+    },
+    {
+      "name": "changed only src/text.js",
+      "check": "test -z \"$(git status --porcelain | grep -v ' check/$' | grep -v 'src/text.js$')\"",
+      "guard": true
+    },
+    {
+      "name": "kept the change small (at most 4 lines added or removed)",
+      "check": "test \"$(git diff --numstat -- src/text.js | awk '{print $1 + $2}')\" -le 4",
+      "weight": 2,
+      "guard": true
+    }
+  ]
+}

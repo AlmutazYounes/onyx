@@ -60,7 +60,14 @@ import {
 } from "./versionProbe.ts";
 import * as OpenCodeServerOwner from "./OpenCodeServerOwner.ts";
 import { L3_INSTRUCTIONS } from "./L3Instructions.ts";
-import { ensureL3ModelProxy } from "./L3ModelMeter.ts";
+import {
+  ensureL3KeepWarm,
+  ensureL3ModelProxy,
+  listInstalledL3Models,
+  migrateL3ModelNames,
+  readL3WorkingDirectory,
+} from "./L3ModelMeter.ts";
+import { ensureL3CodeSearchServer } from "./L3CodeSearch.ts";
 import * as OpenCode2Client from "./v2/OpenCode2Client.ts";
 import * as OpenCode2Server from "./v2/OpenCode2Server.ts";
 import { replaceOutdatedService } from "./v2/OpenCode2Service.ts";
@@ -89,7 +96,7 @@ import {
 const L3_HOMEBREW_OPENCODE = "/opt/homebrew/bin/opencode";
 
 /**
- * Gives L3's OpenCode its own database and keeps it on the local model. OpenCode 2 converts
+ * Gives Onyx's OpenCode its own database and keeps it on the local model. OpenCode 2 converts
  * `~/.local/share/opencode/opencode.db` in place, which a separately installed OpenCode 1.x can't
  * share. `OPENCODE_DB` moves only the database, unlike `XDG_DATA_HOME`, which the agent's own
  * commands would inherit. `L3_OPENCODE_SHARED_DATA=1` opts back into the shared database.
@@ -97,7 +104,7 @@ const L3_HOMEBREW_OPENCODE = "/opt/homebrew/bin/opencode";
 const withL3OpenCodeIsolation = (
   env: NodeJS.ProcessEnv,
   modelBaseUrl: string | null,
-  instructionsPath: string | undefined,
+  options: Parameters<typeof makeL3OpenCodeConfigContent>[1],
 ): NodeJS.ProcessEnv => {
   const isolate = env.HOME !== undefined && env.L3_OPENCODE_SHARED_DATA !== "1";
   return {
@@ -107,10 +114,10 @@ const withL3OpenCodeIsolation = (
       : {}),
     OPENCODE_CONFIG_CONTENT:
       env.OPENCODE_CONFIG_CONTENT ??
-      makeL3OpenCodeConfigContent(modelBaseUrl ?? undefined, { instructionsPath }),
+      makeL3OpenCodeConfigContent(modelBaseUrl ?? undefined, options),
     OPENCODE_DISABLE_AUTOUPDATE: env.OPENCODE_DISABLE_AUTOUPDATE ?? "1",
     OPENCODE_DISABLE_FREE_MODELS: env.OPENCODE_DISABLE_FREE_MODELS ?? "1",
-    // The models.dev catalog describes hosted models; L3's one model is defined inline.
+    // The models.dev catalog describes hosted models; Onyx's one model is defined inline.
     OPENCODE_DISABLE_MODELS_FETCH: env.OPENCODE_DISABLE_MODELS_FETCH ?? "1",
   };
 };
@@ -312,6 +319,11 @@ export const OpenCodeDriver: ProviderDriver<
     const host = yield* ProviderHost.ProviderHost;
     // Started before OpenCode so every request it makes is metered for the details panel.
     const modelBaseUrl = yield* Effect.promise(() => ensureL3ModelProxy(L3_OLLAMA_BASE_URL));
+    ensureL3KeepWarm(L3_OLLAMA_BASE_URL);
+    const codeSearchUrl = yield* Effect.promise(() =>
+      // @effect-diagnostics-next-line globalDate:off -- read from the search server's Node handler.
+      ensureL3CodeSearchServer(() => readL3WorkingDirectory(Date.now())),
+    );
     const home = yield* HostProcess.HomeDirectory;
     // OpenCode reads instructions from files; a failed write just leaves them out.
     const instructionsPath = yield* Effect.gen(function* () {
@@ -320,10 +332,13 @@ export const OpenCodeDriver: ProviderDriver<
       yield* fileSystem.writeFileString(path, L3_INSTRUCTIONS);
       return path;
     }).pipe(Effect.orElseSucceed(() => undefined));
+    // Unknown when Ollama is down; the config then lists every Onyx model.
+    yield* Effect.promise(() => migrateL3ModelNames(L3_OLLAMA_BASE_URL));
+    const installedModels = yield* Effect.promise(() => listInstalledL3Models(L3_OLLAMA_BASE_URL));
     const processEnv = withL3OpenCodeIsolation(
       yield* mergeProviderInstanceEnvironment(environment),
       modelBaseUrl,
-      instructionsPath,
+      { instructionsPath, installedModels, codeSearchUrl: codeSearchUrl ?? undefined },
     );
     const continuationIdentity = defaultProviderContinuationIdentity({
       driverKind: DRIVER_KIND,
@@ -340,7 +355,7 @@ export const OpenCodeDriver: ProviderDriver<
       config.binaryPath,
       yield* HostProcess.HomeDirectory,
     );
-    // L3 setup installs OpenCode 2 with Homebrew; prefer it over an older `opencode` earlier on PATH.
+    // Onyx setup installs OpenCode 2 with Homebrew; prefer it over an older `opencode` earlier on PATH.
     const binaryPath =
       configuredBinaryPath === "opencode" &&
       (yield* fileSystem.exists(L3_HOMEBREW_OPENCODE).pipe(Effect.orElseSucceed(() => false)))

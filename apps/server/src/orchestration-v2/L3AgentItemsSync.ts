@@ -6,7 +6,7 @@ import * as Stream from "effect/Stream";
 import { forkParked } from "../serverActivation.ts";
 import * as ServerSettings from "../serverSettings.ts";
 
-/** Keeps OpenCode's L3 permission rules in step with the agent items switched on in settings. */
+/** Keeps OpenCode's Onyx permission rules in step with the agent items switched on in settings. */
 export const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const settings = yield* ServerSettings.ServerSettingsService;

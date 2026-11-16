@@ -1,0 +1,16 @@
+{
+  "source": "Hard: implement a 12-requirement spec end to end; hidden tests grade each requirement, so partial work earns partial credit",
+  "prompt": "Implement csvq.py so it meets every requirement in SPEC.md, both the query() function and the command line. Use only the Python standard library.",
+  "criteria": [
+    {
+      "name": "hidden tests, one per requirement",
+      "tests": "python3 \"$EVAL_TOOLS/pytap.py\" check 'test_*.py'",
+      "weight": 5
+    },
+    {
+      "name": "left SPEC.md and the data alone",
+      "check": "git diff --quiet -- SPEC.md people.csv",
+      "guard": true
+    }
+  ]
+}

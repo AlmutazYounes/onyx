@@ -1,0 +1,21 @@
+{
+  "source": "Navigation in a large repo: a feature described in user terms",
+  "checkout": "dfc2177e",
+  "prompt": "When a user searches their old threads, what kind of index finds matching messages, and in which file is that index created? Do not change any files.",
+  "criteria": [
+    {
+      "name": "changed no files",
+      "check": "test -z \"$(git status --porcelain)\"",
+      "guard": true
+    },
+    {
+      "name": "names the migration",
+      "check": "grep -q '069_ThreadMessageSearch' \"$EVAL_ANSWER\"",
+      "weight": 3
+    },
+    {
+      "name": "says it uses full-text search",
+      "check": "grep -qi 'fts' \"$EVAL_ANSWER\""
+    }
+  ]
+}

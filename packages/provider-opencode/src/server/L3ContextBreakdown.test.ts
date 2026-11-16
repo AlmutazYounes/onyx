@@ -38,7 +38,7 @@ const system = [
 ].join("\n");
 
 const body = {
-  model: "l3-coder",
+  model: "onyx-qwen",
   max_completion_tokens: 16_384,
   messages: [
     { role: "system", content: system },

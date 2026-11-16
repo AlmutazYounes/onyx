@@ -1491,6 +1491,23 @@ export function createServerEnvironmentAtoms<R, E>(
       refreshIntervalMs: 3_000,
       idleTtlMs: 0,
     }),
+    localModels: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:server:local-models",
+      tag: WS_METHODS.serverGetLocalModels,
+      staleTimeMs: 5_000,
+      refreshIntervalMs: 5_000,
+      idleTtlMs: 0,
+    }),
+    setLocalModelLoaded: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:set-local-model-loaded",
+      tag: WS_METHODS.serverSetLocalModelLoaded,
+      concurrency: { mode: "singleFlight", key: ({ environmentId }) => environmentId },
+    }),
+    measureLocalModel: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:measure-local-model",
+      tag: WS_METHODS.serverMeasureLocalModel,
+      concurrency: { mode: "singleFlight", key: ({ environmentId }) => environmentId },
+    }),
     processResourceHistory: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:server:process-resource-history",
       tag: WS_METHODS.serverGetProcessResourceHistory,

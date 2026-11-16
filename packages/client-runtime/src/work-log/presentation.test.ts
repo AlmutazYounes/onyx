@@ -4,6 +4,7 @@ import { ThreadId, TurnItemId, type OrchestrationV2TurnItem } from "@t3tools/con
 import * as DateTime from "effect/DateTime";
 
 import {
+  liveThoughtTail,
   resolveWorkEntryToolPresentation,
   toolItemForDisplay,
   type WorkLogPresentationEntry,
@@ -202,5 +203,16 @@ describe("resolveWorkEntryToolPresentation", () => {
         toolData: { server: "another-server", tool: "preview_click" },
       }),
     ).toBeNull();
+  });
+});
+
+describe("liveThoughtTail", () => {
+  it("shows the newest words of raw reasoning and keeps summary headings", () => {
+    const thought = `${"Earlier thinking that has scrolled away. ".repeat(20)}Now checking the loopback list.`;
+    const tail = liveThoughtTail(thought, 60);
+    expect(tail.startsWith("…")).toBe(true);
+    expect(tail.endsWith("Now checking the loopback list.")).toBe(true);
+    expect(liveThoughtTail("Short thought.")).toBe("Short thought.");
+    expect(liveThoughtTail("**Inspecting config**\n\nDetails follow.")).toBe("Inspecting config");
   });
 });

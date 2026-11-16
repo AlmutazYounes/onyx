@@ -11,6 +11,7 @@ Write or run an eval when a change affects what a model sees or does: agent inst
 | [pr-content](pr-content/)       | Whether PR generation describes the diff when project instructions try to redirect it.               |
 | [voice-cleanup](voice-cleanup/) | Whether optional dictation cleanup edits only the spoken text and preserves its meaning.             |
 | [test-signal](test-signal/)     | Whether a cheap model running the test-signal check flags low-signal tests.                          |
+| [local-agent](local-agent/)     | Whether Onyx's local model finishes small coding tasks through OpenCode, and how fast turns start.   |
 
 ## Run an eval
 

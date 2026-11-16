@@ -155,7 +155,7 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
   const releaseBaseUrl =
     mirror?.feedUrl ??
     Option.getOrUndefined(yield* Config.String(CLI_RELEASE_BASE_URL_ENV).pipe(Config.option));
-  // Published `t3` releases are upstream T3 Code; installing one would replace L3.
+  // Published `t3` releases are upstream T3 Code; installing one would replace Onyx.
   const allowUpstreamUpdates = yield* Config.Boolean("L3_ALLOW_UPSTREAM_UPDATES").pipe(
     Config.withDefault(false),
   );
@@ -192,7 +192,7 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
     }
     if (!allowUpstreamUpdates) {
       return yield* failWith(
-        "L3 does not install T3 Code releases. Update L3 from its source checkout and rebuild.",
+        "Onyx does not install T3 Code releases. Update Onyx from its source checkout and rebuild.",
       );
     }
     if (capability === "desktop-managed") {
@@ -207,14 +207,14 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
         );
       }
       return yield* failWith(
-        "This server is managed by the L3 desktop app on its machine; update the desktop app to update it.",
+        "This server is managed by the Onyx desktop app on its machine; update the desktop app to update it.",
       );
     }
     // The target must accept the launcher that will run it, which can be older than this server.
     const launcherProtocol = launcher.protocol;
     if (capability === null || launcherProtocol === undefined) {
       return yield* failWith(
-        "Remote updates require the L3 background service. Run `t3 service install` on the server machine.",
+        "Remote updates require the Onyx background service. Run `t3 service install` on the server machine.",
       );
     }
 

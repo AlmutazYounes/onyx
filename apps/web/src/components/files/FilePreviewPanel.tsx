@@ -137,6 +137,7 @@ import {
   setProjectFileQueryData,
   useProjectFileQuery,
 } from "./projectFilesQueryState";
+import { useWorkspaceLayout } from "~/workspaceLayout";
 
 const NO_FILE_REVISION_ATOM = Atom.make(null);
 
@@ -1197,12 +1198,16 @@ export default function FilePreviewPanel({
     serverConfig?.shellRevealInFileManager === true;
   // Everything preview-related keys off previewPath; a folder has no preview.
   const previewPath = isFolder ? null : relativePath;
+  // The editor layout keeps its tree in the window sidebar.
+  const editorLayout = useWorkspaceLayout() === "editor";
   const [explorerOpen, setExplorerOpen] = useState(initialExplorerOpen);
-  const showExplorer = shouldShowFileExplorer({
-    relativePath: previewPath,
-    explorerOpen,
-    attachmentOpen: attachment !== undefined,
-  });
+  const showExplorer =
+    !editorLayout &&
+    shouldShowFileExplorer({
+      relativePath: previewPath,
+      explorerOpen,
+      attachmentOpen: attachment !== undefined,
+    });
   const [renderMarkdownPreferred, setRenderMarkdownPreferred] = useLocalStorage(
     RENDER_MARKDOWN_STORAGE_KEY,
     false,
@@ -1499,7 +1504,7 @@ export default function FilePreviewPanel({
               <Globe2 className="size-3.5" />
             </FileSurfaceAction>
           ) : null}
-          {!isHostFile && previewPath !== null ? (
+          {!isHostFile && previewPath !== null && !editorLayout ? (
             <FileSurfaceAction
               label={explorerOpen ? "Hide file explorer" : "Show file explorer"}
               pressed={explorerOpen}
@@ -1526,6 +1531,7 @@ export default function FilePreviewPanel({
         </div>
       ) : null}
       <div className="flex min-h-0 flex-1 overflow-hidden">
+        {editorLayout && !previewPath ? <EditorEmptyState /> : null}
         <div
           className={cn("min-w-0 flex-1 flex-col overflow-hidden", previewPath ? "flex" : "hidden")}
         >
@@ -1754,6 +1760,14 @@ export default function FilePreviewPanel({
           </FileExplorerPane>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+export function EditorEmptyState() {
+  return (
+    <div className="flex min-w-0 flex-1 items-center justify-center p-6 text-center text-xs text-muted-foreground">
+      Open a file from the Explorer.
     </div>
   );
 }

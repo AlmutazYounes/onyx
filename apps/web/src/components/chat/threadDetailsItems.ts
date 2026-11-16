@@ -26,7 +26,7 @@ type ThreadDetailsItemSettings = Pick<
 >;
 
 // People who turned on the retired Labs toggle keep Usage and Context until they change them here.
-// L3 shows Context by default: its local model's breakdown is measured, not a guess.
+// Onyx shows Context by default: its local model's breakdown is measured, not a guess.
 function defaultVisible(item: ThreadDetailsItem, settings: ThreadDetailsItemSettings) {
   if (item.id === "context") return true;
   return item.id === "usage" ? settings.threadDetailsUsageEnabled : item.defaultVisible;

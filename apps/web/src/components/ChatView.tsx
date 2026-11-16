@@ -124,6 +124,7 @@ import { resolveThreadReferenceCopyTarget } from "@t3tools/client-runtime/thread
 import { resolveTerminalSessionLabel } from "@t3tools/shared/terminalLabels";
 import { useAtomValue } from "@effect/atom-react";
 import {
+  type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type SetStateAction,
   use,
@@ -204,6 +205,18 @@ import { isEditableFocused } from "../lib/editableFocus";
 import { DEFAULT_RESOLVED_KEYBINDINGS } from "@t3tools/shared/keybindings";
 import { shortcutLabelForCommand } from "../keybindings";
 import { cn } from "~/lib/utils";
+import { RESIZABLE_WIDTH_PROPERTY, useResizableWidth } from "~/hooks/useResizableWidth";
+import { createPortal } from "react-dom";
+import { EditorEmptyState } from "./files/FilePreviewPanel";
+import { EditorExplorer } from "./files/EditorExplorer";
+import {
+  onWorkspaceLayoutToggleRequest,
+  useEditorViewStore,
+  useWorkspaceLayoutPreference,
+  type WorkspaceLayout,
+  WorkspaceLayoutContext,
+} from "~/workspaceLayout";
+import { RightPanelResizeHandle } from "./preview/RightPanelResizeHandle";
 import { COLLAPSED_SIDEBAR_TITLEBAR_INSET_CLASS } from "~/workspaceTitlebar";
 import { toastManager } from "./ui/toast";
 import { projectScriptIdFromCommand } from "~/projectScripts";
@@ -1124,7 +1137,6 @@ export default function ChatView(props: ChatViewProps) {
   // An embedded side chat has no panel; a stale maximized flag would hide its own column.
   const rightPanelMaximized =
     !embedded && canMaximizeRightPanel && rightPanelState.maximized === true;
-  const inlineRightPanelOwnsTitleBar = rightPanelOpen && !shouldUsePlanSidebarSheet;
   const [threadPanelPopoverHandle] = useState(PopoverCreateHandle);
   const [chatCanvasStore] = useState(createChatCanvasStore);
 
@@ -1136,6 +1148,22 @@ export default function ChatView(props: ChatViewProps) {
       ? scopeProjectRef(activeThreadEnvironmentId, activeThreadProjectId)
       : null;
   const activeProject = useProject(activeProjectRef);
+  const [workspaceLayoutPreference, setWorkspaceLayoutPreference] = useWorkspaceLayoutPreference();
+  const workspaceLayoutAvailable =
+    !embedded && !shouldUsePlanSidebarSheet && activeThreadRef !== null && activeProject !== null;
+  const editorLayout = workspaceLayoutAvailable && workspaceLayoutPreference === "editor";
+  const workspaceLayout: WorkspaceLayout = editorLayout ? "editor" : "agents";
+  const chatColumnHidden = rightPanelMaximized && !editorLayout;
+  const editorChatWidth = useResizableWidth({
+    storageKey: "onyx:editor-chat-width",
+    defaultWidth: 420,
+    minWidth: 320,
+    maxWidth: 760,
+    edge: "left",
+  });
+  // In the editor layout the chat sits at the window's right edge, under the title bar controls.
+  const inlineRightPanelOwnsTitleBar =
+    rightPanelOpen && !shouldUsePlanSidebarSheet && !editorLayout;
   const activeProjectSettings = resolveProjectSettings(
     settings,
     activeProject?.id ?? null,
@@ -2744,6 +2772,55 @@ export default function ChatView(props: ChatViewProps) {
     }
   });
 
+  const setWorkspaceLayout = (next: WorkspaceLayout) => {
+    if (!workspaceLayoutAvailable) return;
+    setWorkspaceLayoutPreference(next);
+    if (next === "editor") {
+      useEditorViewStore.setState({ view: "explorer" });
+      if (!rightPanelOpen && rightPanelState.surfaces.length > 0) toggleRightPanelStable();
+    }
+  };
+  const setWorkspaceLayoutStable = useStableCallback(setWorkspaceLayout);
+  const toggleWorkspaceLayoutStable = useStableCallback(() =>
+    setWorkspaceLayout(editorLayout ? "agents" : "editor"),
+  );
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to layout toggles from the command palette, which has no handle on this view
+  useEffect(() => {
+    if (embedded) return;
+    return onWorkspaceLayoutToggleRequest(toggleWorkspaceLayoutStable);
+  }, [embedded, toggleWorkspaceLayoutStable]);
+  const sourceControlAvailable = isServerThread && isGitRepo;
+  // The editor layout takes over the window sidebar only for the thread on screen.
+  const editorSidebarActive = editorLayout && !backgroundThread;
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- tells the window sidebar, which sits above this view, to show the editor rail while this thread is in the editor layout
+  useEffect(() => {
+    if (!editorSidebarActive) return;
+    useEditorViewStore.setState({
+      active: true,
+      openChanges: sourceControlAvailable ? addDiffSurfaceStable : null,
+    });
+    return () => useEditorViewStore.setState({ active: false, openChanges: null });
+  }, [editorSidebarActive, sourceControlAvailable, addDiffSurfaceStable]);
+  const editorExplorerSlot = useEditorViewStore((state) => state.explorerSlot);
+  const editorExplorer =
+    editorSidebarActive && editorExplorerSlot && activeProject && activeWorkspaceRoot
+      ? createPortal(
+          <EditorExplorer
+            environmentId={activeProject.environmentId}
+            cwd={activeWorkspaceRoot}
+            projectName={activeProject.title}
+            selectedPath={
+              renderedRightPanelSurface?.kind === "file"
+                ? renderedRightPanelSurface.relativePath
+                : null
+            }
+            onOpenFile={openFileSurfaceStable}
+            workspaceMutationId={workspaceMutationId}
+          />,
+          editorExplorerSlot,
+        )
+      : null;
+
   useChatShortcuts({
     enabled: activeThreadId !== null && !backgroundThread,
     embedded,
@@ -2762,6 +2839,10 @@ export default function ChatView(props: ChatViewProps) {
       ...terminalShortcuts,
       ...rightPanelShortcuts,
       ...threadLifecycleShortcuts,
+      "workspace.toggleLayout": ({ event }) => {
+        if (!workspaceLayoutAvailable) return false;
+        if (!event.repeat) toggleWorkspaceLayoutStable();
+      },
       "thread.copyReference": ({ event }) => {
         if (!event.repeat) copyActiveThreadReference();
       },
@@ -2844,7 +2925,7 @@ export default function ChatView(props: ChatViewProps) {
         : serverConfig === null
           ? "Side chats are not ready yet. Try again in a moment."
           : serverConfig.environment.capabilities.sideChats !== true
-            ? "Update this environment's L3 server to use side chats."
+            ? "Update this environment's Onyx server to use side chats."
             : sideChatsOffered && !isServerThread
               ? "Side chats start after the first message."
               : sideChat.available &&
@@ -3297,6 +3378,16 @@ export default function ChatView(props: ChatViewProps) {
     onToggleTerminal: toggleTerminalVisibilityStable,
     onToggleThreadPanel: toggleThreadPanelStable,
     onToggleRightPanel: toggleRightPanelStable,
+    ...(workspaceLayoutAvailable
+      ? {
+          workspaceLayout,
+          workspaceLayoutShortcutLabel: shortcutLabelForCommand(
+            keybindings,
+            "workspace.toggleLayout",
+          ),
+          onWorkspaceLayoutChange: setWorkspaceLayoutStable,
+        }
+      : {}),
   } satisfies PanelLayoutControlsProps;
   const panelToggleControls = (
     <PanelLayoutControls
@@ -3307,7 +3398,7 @@ export default function ChatView(props: ChatViewProps) {
   const threadPanelHeaderControl = <ThreadPanelHeaderControl {...panelToggleControlProps} />;
   const panelLayoutControls = (
     <WorkspaceTitlebarControls
-      showMaximizeControl={!shouldUsePlanSidebarSheet}
+      showMaximizeControl={!shouldUsePlanSidebarSheet && !editorLayout}
       rightPanelOpen={rightPanelOpen}
       animationsActive={panelAnimationsActive}
       maximized={rightPanelMaximized}
@@ -3315,6 +3406,20 @@ export default function ChatView(props: ChatViewProps) {
     >
       {panelToggleControls}
     </WorkspaceTitlebarControls>
+  );
+  const terminalDrawers = embedded ? null : (
+    <ChatTerminalDrawers
+      activeThreadKey={activeThreadKey}
+      activeTerminalOpen={Boolean(terminalUiState.terminalOpen)}
+      composerHeight={editorLayout ? 0 : composerReservedHeight}
+      launchContext={activeTerminalLaunchContext ?? null}
+      splitShortcutLabel={splitTerminalShortcutLabel ?? undefined}
+      splitVerticalShortcutLabel={splitTerminalVerticalShortcutLabel ?? undefined}
+      newShortcutLabel={newTerminalShortcutLabel ?? undefined}
+      closeShortcutLabel={closeTerminalShortcutLabel ?? undefined}
+      keybindings={keybindings}
+      onAddTerminalContext={addTerminalContextToDraftStable}
+    />
   );
   const workspaceFileDropHandlers = makeWorkspaceFileDropHandlers({
     setDragActive: setIsWorkspaceFileDragActive,
@@ -3325,7 +3430,17 @@ export default function ChatView(props: ChatViewProps) {
   const content = (
     <div
       ref={setWorkspaceLayoutElement}
-      className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-background"
+      className={cn(
+        "relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-background",
+        editorLayout && "flex-row-reverse",
+      )}
+      // The Agents | Editor switch widens the top-right controls the drag region must leave clickable.
+      style={
+        workspaceLayoutAvailable
+          ? ({ "--workspace-titlebar-controls-width": "16rem" } as CSSProperties)
+          : undefined
+      }
+      data-workspace-layout={workspaceLayout}
     >
       {embedded ? null : (
         <DeviceSetupDialogHost
@@ -3338,13 +3453,25 @@ export default function ChatView(props: ChatViewProps) {
       <div
         className={cn(
           "flex min-h-0 min-w-0 flex-col overflow-x-hidden",
-          rightPanelMaximized ? "w-0 flex-none" : "flex-1",
+          chatColumnHidden
+            ? "w-0 flex-none"
+            : editorLayout
+              ? "relative w-(--resizable-width) max-w-[60%] flex-none border-l border-border"
+              : "flex-1",
         )}
-        data-chat-column-maximized-away={rightPanelMaximized ? "true" : "false"}
+        style={
+          editorLayout
+            ? ({ [RESIZABLE_WIDTH_PROPERTY]: `${editorChatWidth.width}px` } as CSSProperties)
+            : undefined
+        }
+        data-chat-column-maximized-away={chatColumnHidden ? "true" : "false"}
         data-chat-column
-        inert={rightPanelMaximized}
+        inert={chatColumnHidden}
         onMouseUp={preventMiddleClickPasteOutsideEditable}
       >
+        {editorLayout ? (
+          <RightPanelResizeHandle handlers={editorChatWidth.handlers} label="Resize chat" />
+        ) : null}
         {embedded ? null : (
           <header
             ref={threadPanelPopoverAnchorRef}
@@ -3365,7 +3492,7 @@ export default function ChatView(props: ChatViewProps) {
             {isElectron && rightPanelControlsAtRoot ? (
               <span
                 aria-hidden
-                className="pointer-events-none fixed top-[var(--workspace-controls-top)] right-[var(--workspace-controls-right)] h-[var(--workspace-topbar-height)] w-28 [-webkit-app-region:no-drag]"
+                className="pointer-events-none fixed top-[var(--workspace-controls-top)] right-[var(--workspace-controls-right)] h-[var(--workspace-topbar-height)] w-(--workspace-titlebar-controls-width) [-webkit-app-region:no-drag]"
               />
             ) : null}
             {!rightPanelControlsAtRoot && !rightPanelControlsInPanel ? panelLayoutControls : null}
@@ -3380,6 +3507,7 @@ export default function ChatView(props: ChatViewProps) {
               parentThreadLink={headerParentThreadLink}
               onOpenThread={onOpenRelatedThreadStable}
               rightPanelOpen={inlineRightPanelOwnsTitleBar}
+              layoutSwitchShown={workspaceLayoutAvailable}
               onNewThreadInProject={handleNewThreadInActiveProjectStable}
               {...(activeDraftLogicalProjectKey
                 ? { onOpenProjectSettings: handleOpenDraftProjectSettingsStable }
@@ -3971,85 +4099,79 @@ export default function ChatView(props: ChatViewProps) {
           </ThreadFindCanvas>
         </div>
 
-        {embedded ? null : (
-          <ChatTerminalDrawers
-            activeThreadKey={activeThreadKey}
-            activeTerminalOpen={Boolean(terminalUiState.terminalOpen)}
-            composerHeight={composerReservedHeight}
-            launchContext={activeTerminalLaunchContext ?? null}
-            splitShortcutLabel={splitTerminalShortcutLabel ?? undefined}
-            splitVerticalShortcutLabel={splitTerminalVerticalShortcutLabel ?? undefined}
-            newShortcutLabel={newTerminalShortcutLabel ?? undefined}
-            closeShortcutLabel={closeTerminalShortcutLabel ?? undefined}
-            keybindings={keybindings}
-            onAddTerminalContext={addTerminalContextToDraftStable}
-          />
-        )}
+        {editorLayout ? null : terminalDrawers}
       </div>
 
-      {rightPanelPresent && activeThreadRef && !embedded ? (
-        <ChatRightPanel
-          sheet={shouldUsePlanSidebarSheet}
-          workspaceLayoutElement={workspaceLayoutElement}
-          widthStorageKey={`t3code:preview-panel-width:${activeThreadKey}`}
-          sheetAnimationDurationMs={panelAnimationsActive ? panelAnimationDurationMs : 0}
-          onCloseSheet={closePreviewPanelStable}
-          open={rightPanelOpen}
-          keybindings={keybindings}
-          getShortcutContext={getShortcutContextStable}
-          maximized={rightPanelMaximized}
-          layoutControls={
-            rightPanelOpen ? (
-              <div className="mr-px flex items-center gap-1">
-                <RightPanelMaximizeControl
-                  maximized={rightPanelMaximized}
-                  onToggle={toggleRightPanelMaximizedStable}
-                />
-                {panelToggleControls}
-              </div>
-            ) : null
-          }
-          surfaces={renderedRightPanelSurfaces}
-          environmentId={activeThreadRef.environmentId}
-          activeSurfaceId={renderedRightPanelSurface?.id ?? null}
-          pendingSurfaceIds={pendingFileSurfaceIds}
-          previewSessions={activePreviewState.sessions}
-          desktopByTabId={activePreviewState.desktopByTabId}
-          previewRuntimeTabId={resolvePreviewRuntimeTabId}
-          terminalLabelsById={activeTerminalLabelsById}
-          onActivate={activateRightPanelSurfaceStable}
-          onCloseSurface={closeRightPanelSurfaceStable}
-          onRenameDevice={(surfaceId, title) => {
-            if (activeThreadRef)
-              useRightPanelStore.getState().renameDevice(activeThreadRef, surfaceId, title);
-          }}
-          onCloseOtherSurfaces={closeOtherRightPanelSurfacesStable}
-          onCloseSurfacesToRight={closeRightPanelSurfacesToRightStable}
-          onCloseAllSurfaces={closeAllRightPanelSurfacesStable}
-          onMoveSurface={moveRightPanelSurfaceStable}
-          onCopyFilePath={copyRightPanelFilePathStable}
-          onAddBrowser={() => createBrowserSurface()}
-          onAddBrowserInProfile={createBrowserSurfaceStable}
-          onAddTerminal={addTerminalSurfaceStable}
-          onAddDiff={addDiffSurfaceStable}
-          onAddFiles={addFilesSurfaceStable}
-          onAddPullRequest={addPullRequestSurfaceStable}
-          onAddPullRequests={addPullRequestsSurfaceStable}
-          onAddDevice={addDeviceSurfaceStable}
-          onAddSideChat={sideChatsOffered ? openSideChatStable : undefined}
-          browserAvailable={canOperatePreview && browserAvailable}
-          terminalAvailable={activeProject !== null && canOperateTerminal}
-          diffAvailable={isServerThread && isGitRepo}
-          filesAvailable={activeProject !== null}
-          pullRequestAvailable={pullRequestSurfaceAvailable}
-          pullRequestsAvailable={pullRequestsSurfaceAvailable}
-          deviceAvailable={activeThreadRef !== null}
-          sideChatAvailable={sideChat.available}
-          sideChatDisabledReason={sideChatDisabledReason}
-        >
-          {rightPanelContent}
-        </ChatRightPanel>
-      ) : null}
+      {/* One wrapper in both layouts, so switching keeps the panel's surfaces mounted. */}
+      <div className={editorLayout ? "flex min-h-0 min-w-0 flex-1 flex-col" : "contents"}>
+        {rightPanelPresent && activeThreadRef && !embedded ? (
+          <ChatRightPanel
+            sheet={shouldUsePlanSidebarSheet}
+            workspaceLayoutElement={workspaceLayoutElement}
+            widthStorageKey={`t3code:preview-panel-width:${activeThreadKey}`}
+            sheetAnimationDurationMs={panelAnimationsActive ? panelAnimationDurationMs : 0}
+            onCloseSheet={closePreviewPanelStable}
+            open={rightPanelOpen}
+            keybindings={keybindings}
+            getShortcutContext={getShortcutContextStable}
+            maximized={rightPanelMaximized || editorLayout}
+            layoutControls={
+              rightPanelOpen ? (
+                <div className="mr-px flex items-center gap-1">
+                  <RightPanelMaximizeControl
+                    maximized={rightPanelMaximized}
+                    onToggle={toggleRightPanelMaximizedStable}
+                  />
+                  {panelToggleControls}
+                </div>
+              ) : null
+            }
+            surfaces={renderedRightPanelSurfaces}
+            environmentId={activeThreadRef.environmentId}
+            activeSurfaceId={renderedRightPanelSurface?.id ?? null}
+            pendingSurfaceIds={pendingFileSurfaceIds}
+            previewSessions={activePreviewState.sessions}
+            desktopByTabId={activePreviewState.desktopByTabId}
+            previewRuntimeTabId={resolvePreviewRuntimeTabId}
+            terminalLabelsById={activeTerminalLabelsById}
+            onActivate={activateRightPanelSurfaceStable}
+            onCloseSurface={closeRightPanelSurfaceStable}
+            onRenameDevice={(surfaceId, title) => {
+              if (activeThreadRef)
+                useRightPanelStore.getState().renameDevice(activeThreadRef, surfaceId, title);
+            }}
+            onCloseOtherSurfaces={closeOtherRightPanelSurfacesStable}
+            onCloseSurfacesToRight={closeRightPanelSurfacesToRightStable}
+            onCloseAllSurfaces={closeAllRightPanelSurfacesStable}
+            onMoveSurface={moveRightPanelSurfaceStable}
+            onCopyFilePath={copyRightPanelFilePathStable}
+            onAddBrowser={() => createBrowserSurface()}
+            onAddBrowserInProfile={createBrowserSurfaceStable}
+            onAddTerminal={addTerminalSurfaceStable}
+            onAddDiff={addDiffSurfaceStable}
+            onAddFiles={addFilesSurfaceStable}
+            onAddPullRequest={addPullRequestSurfaceStable}
+            onAddPullRequests={addPullRequestsSurfaceStable}
+            onAddDevice={addDeviceSurfaceStable}
+            onAddSideChat={sideChatsOffered ? openSideChatStable : undefined}
+            browserAvailable={canOperatePreview && browserAvailable}
+            terminalAvailable={activeProject !== null && canOperateTerminal}
+            diffAvailable={isServerThread && isGitRepo}
+            filesAvailable={activeProject !== null}
+            pullRequestAvailable={pullRequestSurfaceAvailable}
+            pullRequestsAvailable={pullRequestsSurfaceAvailable}
+            deviceAvailable={activeThreadRef !== null}
+            sideChatAvailable={sideChat.available}
+            sideChatDisabledReason={sideChatDisabledReason}
+          >
+            {rightPanelContent}
+          </ChatRightPanel>
+        ) : editorLayout ? (
+          <EditorEmptyState />
+        ) : null}
+        {editorLayout ? terminalDrawers : null}
+        {editorExplorer}
+      </div>
 
       <RevertConfirmHost
         threadKey={routeThreadKey}
@@ -4068,7 +4190,7 @@ export default function ChatView(props: ChatViewProps) {
       cwd={activeWorkspaceRoot}
       checkpoints={serverProjection?.checkpoints}
     >
-      {content}
+      <WorkspaceLayoutContext value={workspaceLayout}>{content}</WorkspaceLayoutContext>
     </FileMetadataThreadProvider>
   );
 }

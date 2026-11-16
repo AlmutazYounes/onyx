@@ -1,0 +1,21 @@
+{
+  "source": "Reading part of a large file: the answer sits past OpenCode's 2,000-line read cap, at lines the prompt names",
+  "prompt": "Lines 2605 to 2615 of logs/orders.log cover the outage support asked about. Which order failed in that window, and with what error code? Answer only; do not change any files.",
+  "criteria": [
+    {
+      "name": "changed no files",
+      "check": "test -z \"$(git status --porcelain)\"",
+      "guard": true
+    },
+    {
+      "name": "names the failed order",
+      "check": "grep -q '12611' \"$EVAL_ANSWER\"",
+      "weight": 2
+    },
+    {
+      "name": "names the error code",
+      "check": "grep -q 'E-7731' \"$EVAL_ANSWER\"",
+      "weight": 2
+    }
+  ]
+}

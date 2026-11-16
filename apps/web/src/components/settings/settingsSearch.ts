@@ -27,6 +27,7 @@ export type SettingsPath =
   | "/settings/keybindings"
   | "/settings/snap-shot"
   | "/settings/providers"
+  | "/settings/models"
   | "/settings/threads"
   | "/settings/browser"
   | "/settings/devices"
@@ -102,6 +103,7 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/keybindings": msg("Keybindings"),
   "/settings/snap-shot": msg("SnapShots"),
   "/settings/providers": msg("Providers"),
+  "/settings/models": msg("Local models"),
   "/settings/threads": msg("Threads"),
   "/settings/browser": msg("Browser"),
   "/settings/devices": msg("Devices"),
@@ -141,6 +143,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
     heading: msg("Agents"),
     paths: [
       "/settings/providers",
+      "/settings/models",
       "/settings/threads",
       "/settings/browser",
       "/settings/devices",
@@ -972,6 +975,14 @@ export const SETTINGS_SEARCH_ITEMS = [
     targetId: "snap-shot-enabled",
   },
   {
+    id: "local-models",
+    title: "Local models",
+    to: "/settings/models",
+    searchTerms: [
+      "ollama local model speed tokens per second tok/s benchmark measure memory ram size quantization context qwen laguna",
+    ],
+  },
+  {
     id: "providers",
     title: "Providers",
     to: "/settings/providers",
@@ -1107,7 +1118,7 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "pull-request-links-open-in-app",
-    title: "Open pull requests in L3",
+    title: "Open pull requests in Onyx",
     to: "/settings/diffs",
     searchTerms: [
       `pr commit links ${SOURCE_CONTROL_HOST_LABELS} browser external click default pull request view panel`,
@@ -1386,6 +1397,7 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/snap-shot": null,
   "/settings/keybindings": null,
   "/settings/providers": null,
+  "/settings/models": null,
   "/settings/threads": null,
   "/settings/browser": null,
   "/settings/devices": null,

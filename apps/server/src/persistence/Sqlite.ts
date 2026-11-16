@@ -20,7 +20,7 @@ export class ServerOwnsDatabaseError extends Schema.TaggedError<ServerOwnsDataba
   { stateDir: Schema.String },
 ) {
   override get message(): string {
-    return `Another L3 process, usually a running server, owns ${this.stateDir}, and this CLI would change its database schema. Use the \`t3\` that matches the running server, or stop that server, then retry. The database was not changed.`;
+    return `Another Onyx process, usually a running server, owns ${this.stateDir}, and this CLI would change its database schema. Use the \`t3\` that matches the running server, or stop that server, then retry. The database was not changed.`;
   }
 }
 
@@ -46,7 +46,7 @@ const damagedDatabaseError = (dbPath: string, cause: SqlError.SqlError) =>
     reason: new SqlError.UnknownError({
       cause,
       operation: "open",
-      message: `The L3 database at ${dbPath} is damaged or is not a SQLite database, so L3 cannot start. To recover, quit L3, then move that file and any -wal and -shm files next to it out of the folder, or replace them with a backup. L3 creates a new database on the next start.`,
+      message: `The Onyx database at ${dbPath} is damaged or is not a SQLite database, so Onyx cannot start. To recover, quit Onyx, then move that file and any -wal and -shm files next to it out of the folder, or replace them with a backup. Onyx creates a new database on the next start.`,
     }),
   });
 

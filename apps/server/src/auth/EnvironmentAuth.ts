@@ -86,7 +86,7 @@ export interface McpClientSession {
   readonly sessionId: AuthSessionId;
   readonly label: string;
   readonly access: AuthMcpClientAccess;
-  /** Another L3 environment's link, whose work here stays within it. */
+  /** Another Onyx environment's link, whose work here stays within it. */
   readonly peerLink: boolean;
 }
 

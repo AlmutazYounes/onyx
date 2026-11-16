@@ -2,6 +2,7 @@ import * as NodeOS from "node:os";
 import {
   L3_LOCAL_MODEL,
   L3_OLLAMA_BASE_URL,
+  l3CanonicalModelId,
   type HostResourcesSnapshot,
   type LocalModelStats,
 } from "@t3tools/contracts";
@@ -16,6 +17,13 @@ import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 import { HttpClient, HttpClientRequest } from "effect/http";
+
+import {
+  groupProcesses,
+  parseGpuClientTimes,
+  parseProcessRows,
+  shareUsage,
+} from "./hostBreakdown.ts";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 export class HostResources extends Context.Service<
@@ -128,7 +136,7 @@ const make = Effect.fn("makeHostResources")(function* () {
     // Ollama not running: nothing to show.
     if (running._tag === "None") return null;
     const loaded = running.value.models.find(
-      (model) => model.name === L3_LOCAL_MODEL || model.name.startsWith(`${L3_LOCAL_MODEL}:`),
+      (model) => l3CanonicalModelId(model.name) === L3_LOCAL_MODEL,
     );
     const rate = readL3ModelRate(DateTime.toEpochMillis(yield* DateTime.now));
     return {
@@ -140,6 +148,40 @@ const make = Effect.fn("makeHostResources")(function* () {
   });
 
   const readFile = (path: string) => fs.readFileString(path).pipe(Effect.orElseSucceed(() => ""));
+
+  const run = (command: string, args: ReadonlyArray<string>) =>
+    spawner
+      .string(ChildProcess.make(command, [...args], { stdin: "ignore", stderr: "ignore" }))
+      .pipe(
+        Effect.timeout("2 seconds"),
+        Effect.orElseSucceed(() => ""),
+      );
+  // GPU time only means something as a change since the last sample.
+  let previousGpuTimes: ReadonlyMap<number, number> | null = null;
+  const readUsage = Effect.fn("HostResources.readUsage")(function* (input: {
+    readonly cpuCount: number;
+    readonly cpuUtilization: number | null;
+    readonly gpuUtilization: number | null;
+  }) {
+    if (platform !== "darwin" && platform !== "linux") return null;
+    const rows = parseProcessRows(yield* run("ps", ["-Ao", "pid=,ppid=,pcpu=,rss=,comm="]));
+    if (rows.length === 0) return null;
+    const gpuNow =
+      platform === "darwin"
+        ? parseGpuClientTimes(
+            yield* run("/usr/sbin/ioreg", ["-r", "-c", "AGXDeviceUserClient", "-l", "-w", "0"]),
+          )
+        : new Map<number, number>();
+    const usage = shareUsage({
+      rows,
+      groups: groupProcesses(rows, process.pid),
+      ...input,
+      gpuNow,
+      gpuBefore: previousGpuTimes,
+    });
+    previousGpuTimes = gpuNow;
+    return usage;
+  });
 
   const sample = Effect.fn("HostResources.sample")(function* () {
     // cgroup v2 only; limits of the server's own cgroup, which is `/` inside a container.
@@ -236,14 +278,16 @@ const make = Effect.fn("makeHostResources")(function* () {
         memoryMax - (memoryCurrent - reclaimable),
       );
     }
+    const gpuUtilization = yield* readGpu();
     return {
       sampledAt: DateTime.toEpochMillis(yield* DateTime.now),
       cpuUtilization,
       cpuCount,
       availableMemoryBytes: Math.min(totalMemoryBytes, Math.max(0, availableMemoryBytes)),
       totalMemoryBytes,
-      gpuUtilization: yield* readGpu(),
+      gpuUtilization,
       localModel: yield* readLocalModel(),
+      usage: yield* readUsage({ cpuCount, cpuUtilization, gpuUtilization }),
     };
   });
 

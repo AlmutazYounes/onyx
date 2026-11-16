@@ -335,8 +335,8 @@ export const continueRestartedRun = Effect.fn("RestartContinuation.continueResta
           source: { kind: "system" },
           outcome: "updated",
           summary: note.settled
-            ? "L3 restarted and stopped background work"
-            : "L3 restarted and resumed this turn",
+            ? "Onyx restarted and stopped background work"
+            : "Onyx restarted and resumed this turn",
           detail: text,
         },
         attachments: [],

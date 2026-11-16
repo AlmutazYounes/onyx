@@ -354,6 +354,13 @@ import {
   ResourceTelemetrySnapshot,
 } from "./resourceTelemetry.ts";
 import {
+  LocalModelBenchmark,
+  LocalModelError,
+  LocalModelsSnapshot,
+  ServerMeasureLocalModelInput,
+  ServerSetLocalModelLoadedInput,
+} from "./localModels.ts";
+import {
   UsageLimitSourceError,
   ProviderConsumeResetCreditInput,
   ProviderConsumeResetCreditResult,
@@ -544,6 +551,9 @@ export const WS_METHODS = {
   serverGetProcessDiagnostics: "server.getProcessDiagnostics",
   serverGetHostResources: "server.getHostResources",
   serverGetModelContext: "server.getModelContext",
+  serverGetLocalModels: "server.getLocalModels",
+  serverMeasureLocalModel: "server.measureLocalModel",
+  serverSetLocalModelLoaded: "server.setLocalModelLoaded",
   serverGetProcessResourceHistory: "server.getProcessResourceHistory",
   serverGetResourceTelemetryHistory: "server.getResourceTelemetryHistory",
   serverRetryResourceTelemetry: "server.retryResourceTelemetry",
@@ -990,6 +1000,23 @@ const WsServerGetModelContextRpc = Rpc.make(WS_METHODS.serverGetModelContext, {
   payload: ServerGetModelContextInput,
   success: Schema.NullOr(ModelContextBreakdown),
   error: EnvironmentAuthorizationError,
+});
+
+const WsServerGetLocalModelsRpc = Rpc.make(WS_METHODS.serverGetLocalModels, {
+  payload: Schema.Struct({}),
+  success: LocalModelsSnapshot,
+  error: EnvironmentAuthorizationError,
+});
+
+const WsServerMeasureLocalModelRpc = Rpc.make(WS_METHODS.serverMeasureLocalModel, {
+  payload: ServerMeasureLocalModelInput,
+  success: LocalModelBenchmark,
+  error: Schema.Union([LocalModelError, EnvironmentAuthorizationError]),
+});
+
+const WsServerSetLocalModelLoadedRpc = Rpc.make(WS_METHODS.serverSetLocalModelLoaded, {
+  payload: ServerSetLocalModelLoadedInput,
+  error: Schema.Union([LocalModelError, EnvironmentAuthorizationError]),
 });
 
 const WsServerGetProcessResourceHistoryRpc = Rpc.make(WS_METHODS.serverGetProcessResourceHistory, {
@@ -2173,6 +2200,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerGetProcessDiagnosticsRpc,
   WsServerGetHostResourcesRpc,
   WsServerGetModelContextRpc,
+  WsServerGetLocalModelsRpc,
+  WsServerMeasureLocalModelRpc,
+  WsServerSetLocalModelLoadedRpc,
   WsServerGetProcessResourceHistoryRpc,
   WsServerGetResourceTelemetryHistoryRpc,
   WsServerRetryResourceTelemetryRpc,

@@ -54,6 +54,8 @@ interface ChatHeaderProps {
   parentThreadLink: { threadId: ThreadId; title: string } | null;
   onOpenThread: (threadId: ThreadId) => void;
   rightPanelOpen: boolean;
+  /** The title bar controls include the Agents | Editor switch. */
+  layoutSwitchShown?: boolean;
   onNewThreadInProject: () => void;
   onOpenProjectSettings?: (() => void) | undefined;
   onFindInThread?: ((threadRef: ScopedThreadRef) => void) | undefined;
@@ -79,6 +81,7 @@ export const ChatHeader = memo(function ChatHeader({
   parentThreadLink,
   onOpenThread,
   rightPanelOpen,
+  layoutSwitchShown = false,
   onNewThreadInProject,
   onOpenProjectSettings,
   onFindInThread,
@@ -251,7 +254,7 @@ export const ChatHeader = memo(function ChatHeader({
       ref={breadcrumbContainerRef}
       className={cn(
         "flex min-w-0 flex-1 items-center gap-2 sm:gap-3",
-        rightPanelOpen ? "pr-10" : "pr-24",
+        rightPanelOpen ? "pr-10" : layoutSwitchShown ? "pr-56" : "pr-24",
       )}
       onContextMenu={handleHeaderContextMenu}
     >

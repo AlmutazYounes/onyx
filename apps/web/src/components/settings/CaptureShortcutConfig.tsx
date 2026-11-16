@@ -218,7 +218,7 @@ export function CaptureShortcutConfig({
       ) : (
         <>
           <p className="text-muted-foreground">
-            Allow L3 to read your desktop settings. You'll review any changes here before saving.
+            Allow Onyx to read your desktop settings. You'll review any changes here before saving.
           </p>
           <Button
             disabled={actionBusy || !bridge}
@@ -238,7 +238,7 @@ export function CaptureShortcutConfig({
         <p role="status" className="text-muted-foreground">
           {state.shortcutPending
             ? "Connecting to your desktop…"
-            : "Restart L3 to finish connecting your shortcut."}
+            : "Restart Onyx to finish connecting your shortcut."}
         </p>
       ) : null}
       <details className="text-xs text-muted-foreground">
@@ -257,7 +257,7 @@ export function CaptureShortcutConfig({
                 state.shortcutConfigPath ??
                 (niri ? "~/.config/niri/config.kdl" : "~/.config/hypr/hyprland.conf")}
             </p>
-            {niri ? <p>L3 also reads any files included by this file.</p> : null}
+            {niri ? <p>Onyx also reads any files included by this file.</p> : null}
             {preview && preview.resolvedPath !== preview.path ? (
               <p className="break-all">Linked to {preview.resolvedPath}. The link will be kept.</p>
             ) : null}
@@ -318,7 +318,7 @@ export function CaptureShortcutConfig({
             {isCopied ? "Copied" : "Copy shortcut"}
           </Button>
           <p>
-            Turn capture off in L3 to stop it. Remove the shortcut from {desktop} to free up the
+            Turn capture off in Onyx to stop it. Remove the shortcut from {desktop} to free up the
             keys.
           </p>
           {state.shortcutActionRegistered === false ? (

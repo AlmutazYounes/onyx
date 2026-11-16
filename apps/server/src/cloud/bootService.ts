@@ -104,7 +104,7 @@ export function renderBootServiceUnit(plan: BootServicePlan): string {
   // The user manager has no reliable network-online target; server networking retries itself.
   return [
     "[Unit]",
-    "Description=L3 server",
+    "Description=Onyx server",
     "StartLimitIntervalSec=300",
     "StartLimitBurst=5",
     "",
@@ -230,7 +230,7 @@ export function renderBootServiceTask(
   return [
     `<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">`,
     `  <RegistrationInfo>`,
-    `    <Description>L3 server</Description>`,
+    `    <Description>Onyx server</Description>`,
     `  </RegistrationInfo>`,
     `  <Triggers>`,
     `    <LogonTrigger>`,
@@ -638,7 +638,7 @@ export class BootServiceInstallError extends Schema.TaggedError<BootServiceInsta
   { cause: Schema.Defect() },
 ) {
   override get message(): string {
-    return "Could not set up the L3 background service.";
+    return "Could not set up the Onyx background service.";
   }
 }
 
@@ -665,7 +665,7 @@ export function formatBootServiceProblem(
     case "linger-unavailable":
       return 'Cannot check whether this user can run services after logout. Run `loginctl show-user "$(id -un)" --property=Linger` and check that systemd-logind is available.';
     case "linger-disabled":
-      return 'Lingering is disabled. L3 will stop when your last login session ends and will not start at boot. Run `sudo loginctl enable-linger "$(id -un)"` on this machine, then retry the service command as your normal user.';
+      return 'Lingering is disabled. Onyx will stop when your last login session ends and will not start at boot. Run `sudo loginctl enable-linger "$(id -un)"` on this machine, then retry the service command as your normal user.';
     case "service-disabled":
       return `The service is not enabled to start automatically. Run \`${commands.install}\` to repair it.`;
     case "service-stopped":
@@ -719,7 +719,7 @@ export class BootServiceOtherBaseDirError extends Schema.TaggedError<BootService
   },
 ) {
   override get message(): string {
-    return `The L3 service on this machine serves ${this.installedBaseDir}, not ${this.baseDir}. Pass ${formatBootServiceBaseDirOption(this.installedBaseDir)} to manage it, or run \`t3 service uninstall ${formatBootServiceBaseDirOption(this.installedBaseDir)}\` first to move it; both data directories are kept.`;
+    return `The Onyx service on this machine serves ${this.installedBaseDir}, not ${this.baseDir}. Pass ${formatBootServiceBaseDirOption(this.installedBaseDir)} to manage it, or run \`t3 service uninstall ${formatBootServiceBaseDirOption(this.installedBaseDir)}\` first to move it; both data directories are kept.`;
   }
 
   // A refusal the user fixes by rerunning, so the CLI prints the message, not a stack trace.
@@ -733,7 +733,7 @@ export class BootServiceBaseDirUnsupportedError extends Schema.TaggedError<BootS
   { baseDir: Schema.String },
 ) {
   override get message(): string {
-    return `systemd cannot run L3 from ${JSON.stringify(this.baseDir)}: the path contains a quote, backslash or control character. Choose another T3 home with --base-dir.`;
+    return `systemd cannot run Onyx from ${JSON.stringify(this.baseDir)}: the path contains a quote, backslash or control character. Choose another T3 home with --base-dir.`;
   }
 
   override get [CliError.userMessage]() {

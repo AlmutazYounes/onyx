@@ -104,7 +104,7 @@ const environmentLinkCommand = Command.make("link", {
   ),
 }).pipe(
   Command.withDescription(
-    "Link another L3 environment, so agents here can work there. It shows up there under Authorized clients in Settings → Sharing & access, where it can be revoked.",
+    "Link another Onyx environment, so agents here can work there. It shows up there under Authorized clients in Settings → Sharing & access, where it can be revoked.",
   ),
   Command.withHandler((flags) =>
     runWithPeerLinks(flags, (links) =>
@@ -162,7 +162,7 @@ const environmentUnlinkCommand = Command.make("unlink", {
 );
 
 export const environmentCommand = Command.make("environment").pipe(
-  Command.withDescription("Link other L3 environments, so agents here can work there."),
+  Command.withDescription("Link other Onyx environments, so agents here can work there."),
   Command.withSubcommands([
     environmentLinkCommand,
     environmentListCommand,

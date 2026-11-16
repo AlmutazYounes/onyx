@@ -899,7 +899,14 @@ function readRouteThreadKey(router: AnyRouter): string | null {
   return ref === null ? null : scopedThreadKey(ref);
 }
 
-export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReveal }) {
+export default function Sidebar({
+  routeReveal,
+  showChromeHeader = true,
+}: {
+  routeReveal: SidebarRouteReveal;
+  /** The editor layout's sidebar draws the header above its own rail. */
+  showChromeHeader?: boolean;
+}) {
   const {
     projects,
     serverConfigs,
@@ -2957,7 +2964,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const newThreadInProjectShortcutLabel = shortcutLabelForCommand(keybindings, "chat.newLocal");
   return (
     <SidebarFolderDrop>
-      <SidebarChromeHeader isElectron={isElectron} />
+      {showChromeHeader ? <SidebarChromeHeader isElectron={isElectron} /> : null}
       <SidebarContent
         ref={sidebarContentRef}
         className="min-h-full"

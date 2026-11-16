@@ -80,7 +80,7 @@ export interface McpToolSession {
 }
 
 /**
- * One initialized MCP session over L3's HTTP endpoint, terminated when
+ * One initialized MCP session over Onyx's HTTP endpoint, terminated when
  * the scope closes. Used by the ACP terminal fallback and `t3 thread`.
  */
 export const mcpToolSession = (
@@ -115,7 +115,7 @@ export const mcpToolSession = (
     if (!response.ok) {
       yield* discardResponseBody(response);
       return yield* new AcpMcpBridgeError({
-        message: `L3 MCP endpoint responded with HTTP ${response.status}.`,
+        message: `Onyx MCP endpoint responded with HTTP ${response.status}.`,
       });
     }
     const payloads: Array<unknown> = [];
@@ -140,7 +140,7 @@ export const mcpToolSession = (
     const envelope = asEnvelope(responses.find((entry) => asEnvelope(entry)?.id === id));
     if (envelope === null || envelope.error !== undefined) {
       return yield* new AcpMcpBridgeError({
-        message: `L3 MCP ${method} failed${envelope?.error === undefined ? "." : `: ${JSON.stringify(envelope.error)}`}`,
+        message: `Onyx MCP ${method} failed${envelope?.error === undefined ? "." : `: ${JSON.stringify(envelope.error)}`}`,
       });
     }
     return envelope;
@@ -249,7 +249,7 @@ export function runAcpMcpStdioBridge(options: AcpMcpStdioBridgeOptions): Effect.
           if (envelope.id !== undefined) {
             yield* respondWithError(
               envelope.id,
-              `L3 MCP endpoint responded with HTTP ${response.status}.`,
+              `Onyx MCP endpoint responded with HTTP ${response.status}.`,
             );
           }
           return yield* discardResponseBody(response);
@@ -263,7 +263,7 @@ export function runAcpMcpStdioBridge(options: AcpMcpStdioBridgeOptions): Effect.
             const error = Cause.squash(cause);
             return respondWithError(
               envelope.id,
-              `L3 MCP bridge request failed: ${error instanceof Error ? error.message : String(error)}`,
+              `Onyx MCP bridge request failed: ${error instanceof Error ? error.message : String(error)}`,
             );
           }),
         ),

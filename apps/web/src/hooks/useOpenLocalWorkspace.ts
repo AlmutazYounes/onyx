@@ -70,7 +70,7 @@ export function useOpenLocalWorkspace() {
         });
         if (result._tag === "Failure") {
           const error = squashAtomCommandFailure(result);
-          throw error instanceof Error ? error : new Error("L3 could not add the project.");
+          throw error instanceof Error ? error : new Error("Onyx could not add the project.");
         }
         return projectId;
       },

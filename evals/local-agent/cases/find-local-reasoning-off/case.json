@@ -1,0 +1,21 @@
+{
+  "source": "Navigation in a large repo: one behavior among several similar helpers in different packages",
+  "checkout": "dfc2177e",
+  "prompt": "When thread titles are generated with a local OpenAI-compatible server, the app turns off the model's reasoning. Which file does that, and how does it decide the server is local? Do not change any files.",
+  "criteria": [
+    {
+      "name": "changed no files",
+      "check": "test -z \"$(git status --porcelain)\"",
+      "guard": true
+    },
+    {
+      "name": "names the file",
+      "check": "grep -q 'textGeneratorDrivers.ts' \"$EVAL_ANSWER\"",
+      "weight": 3
+    },
+    {
+      "name": "explains the loopback check",
+      "check": "grep -qiE 'loopback|127\\.|localhost' \"$EVAL_ANSWER\""
+    }
+  ]
+}

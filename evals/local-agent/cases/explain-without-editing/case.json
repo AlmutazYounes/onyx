@@ -1,0 +1,19 @@
+{
+  "source": "Control: a question with no work to do; the agent must answer without touching files",
+  "prompt": "Which environment variables change this app's config, and what happens if APP_RETRIES is negative? Answer only; do not change any files.",
+  "criteria": [
+    {
+      "name": "changed no files",
+      "check": "test -z \"$(git status --porcelain)\"",
+      "guard": true
+    },
+    {
+      "name": "names APP_RETRIES",
+      "check": "grep -qi 'APP_RETRIES' \"$EVAL_ANSWER\""
+    },
+    {
+      "name": "says a negative value becomes 0",
+      "check": "grep -qiE '\\b0\\b|zero' \"$EVAL_ANSWER\""
+    }
+  ]
+}

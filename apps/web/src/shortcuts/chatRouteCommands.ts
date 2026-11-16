@@ -163,7 +163,7 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
             stackedThreadToast({
               type: "info",
               title: "Preview is desktop-only",
-              description: "Open L3 in the desktop app to use the in-app preview.",
+              description: "Open Onyx in the desktop app to use the in-app preview.",
             }),
           );
           return;

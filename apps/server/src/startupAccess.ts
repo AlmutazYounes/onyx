@@ -196,7 +196,7 @@ export const renderTerminalQrCode = (value: string, margin = 2): string => {
 
 export const formatHeadlessServeOutput = (accessInfo: HeadlessServeAccessInfo): string =>
   [
-    "L3 server is ready.",
+    "Onyx server is ready.",
     `Connection string: ${accessInfo.connectionString}`,
     `Token: ${accessInfo.token}`,
     `Pairing URL: ${accessInfo.pairingUrl}`,

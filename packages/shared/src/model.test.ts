@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { ProviderInstanceId, type ModelCapabilities } from "@t3tools/contracts";
+import { ProviderDriverKind, ProviderInstanceId, type ModelCapabilities } from "@t3tools/contracts";
 
 import {
   applyClaudePromptEffortPrefix,
@@ -11,6 +11,7 @@ import {
   getProviderOptionDescriptors,
   readCustomModelEntries,
   modelSelectionsEqual,
+  normalizeModelSlug,
   pickModelSelection,
   withImplicitFastModeDefault,
 } from "./model.ts";
@@ -264,5 +265,13 @@ describe("withImplicitFastModeDefault", () => {
     expect(withImplicitFastModeDefault(caps, [{ id: "fastMode", value: true }])).toEqual([
       { id: "fastMode", value: true },
     ]);
+  });
+});
+
+describe("model slug aliases", () => {
+  it("maps Onyx's old local model names to the renamed models", () => {
+    const opencode = ProviderDriverKind.make("opencode");
+    expect(normalizeModelSlug("l3/l3-coder", opencode)).toBe("l3/onyx-qwen");
+    expect(normalizeModelSlug("l3/onyx-qwen", opencode)).toBe("l3/onyx-qwen");
   });
 });

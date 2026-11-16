@@ -1,0 +1,124 @@
+{
+ "L3AgentItems.ts": [
+  "l3AgentItemRules",
+  "setL3AgentItems"
+ ],
+ "L3ContextBreakdown.ts": [
+  "ChatRequestShape",
+  "analyzeChatRequest",
+  "threadKeyOf",
+  "toContextBreakdown"
+ ],
+ "L3Instructions.ts": [
+  "L3_INSTRUCTIONS"
+ ],
+ "L3ModelMeter.ts": [
+  "StreamMeter",
+  "TokenRateMeter",
+  "ensureL3ModelProxy",
+  "makeSseTokenParser",
+  "makeTokenRateMeter",
+  "readL3ModelContext",
+  "readL3ModelRate"
+ ],
+ "OpenCodeRuntime.ts": [
+  "MINIMUM_OPENCODE_VERSION",
+  "OpenCodeCatalogModel",
+  "OpenCodeCommandResult",
+  "OpenCodeInventory",
+  "OpenCodeRuntime",
+  "OpenCodeRuntimeError",
+  "OpenCodeServerConnection",
+  "OpenCodeServerProcess",
+  "OpenCodeSkill",
+  "OpenCodeSlashCommand",
+  "OpenCodeStartupFailureReason",
+  "OpenCodeVariantCache",
+  "ParsedOpenCodeModelSlug",
+  "isOpenCodeRuntimeError",
+  "layer",
+  "loadOpenCodeCommands",
+  "loadOpenCodeProviderCatalog",
+  "openCodeQuestionId",
+  "openCodeRuntimeErrorDetail",
+  "parseOpenCodeModelSlug",
+  "parseServerUrlFromOutput",
+  "readOpenCodeCatalogModel",
+  "resolveOpenCodeServerPassword",
+  "resolveOpenCodeVariant",
+  "runOpenCodeSdk",
+  "toOpenCodeFileParts",
+  "toOpenCodePermissionReply",
+  "toOpenCodeQuestionAnswers",
+  "verifyOpenCodeServerVersion"
+ ],
+ "OpenCodeServerLedger.ts": [
+  "OpenCodeServerLedger",
+  "layer",
+  "layerTest",
+  "make"
+ ],
+ "OpenCodeServerOwner.ts": [
+  "OpenCodeServerOwner",
+  "layer",
+  "make"
+ ],
+ "driver.ts": [
+  "OpenCodeDriver",
+  "OpenCodeDriverEnv",
+  "isLocalOpenCodeServerUrl",
+  "openCodeUpdateFor"
+ ],
+ "openCode2Catalog.ts": [
+  "loadOpenCode2Catalog",
+  "loadOpenCode2DirectoryCatalog"
+ ],
+ "providerErrorMessage.ts": [
+  "readableProviderErrorMessage"
+ ],
+ "status.ts": [
+  "OpenCode2Model",
+  "OpenCode2Workspace",
+  "checkOpenCodeProviderStatus",
+  "loadOpenCode2Workspace",
+  "makeOpenCode2ModelLoader",
+  "makePendingOpenCodeProvider",
+  "openCode2CommandsToServerProviderSlashCommands",
+  "openCode2ProviderModels",
+  "openCode2SkillsToServerProviderSkills",
+  "openCodeCommandsToServerProviderSlashCommands",
+  "openCodeProviderModels",
+  "openCodeSkillsToServerProviderSkills",
+  "readSettledOpenCode2Catalog"
+ ],
+ "textGeneration.ts": [
+  "OpenCodeTextGenerationEmptyOutputError",
+  "OpenCodeTextGenerationPromptRequestError",
+  "OpenCodeTextGenerationPromptResponseError",
+  "OpenCodeTextGenerationSessionPayloadError",
+  "OpenCodeTextGenerationSessionRequestError",
+  "makeOpenCodeTextGeneration"
+ ],
+ "toolItems.ts": [
+  "openCodeCodeModeHtmlRenders",
+  "openCodeCommandFailed",
+  "openCodeToolOutput",
+  "openCodeToolTurnItem"
+ ],
+ "usage.ts": [
+  "OpenCodeUsageReadResult",
+  "OpenCodeUsageReaderEnv",
+  "openCodeUsageReader",
+  "readOpenCodeUsage"
+ ],
+ "usageLimits.ts": [
+  "readOpenCodeGoUsageLimits"
+ ],
+ "versionProbe.ts": [
+  "ProbedOpenCode",
+  "classifyOpenCodeCliVersion",
+  "makeOpenCodeRuntimeProbe",
+  "probeOpenCodeBinary",
+  "probeOpenCodeRuntime"
+ ]
+}

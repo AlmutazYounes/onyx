@@ -654,7 +654,7 @@ function BrowserRecordingFrameRateSetting({ disabled }: { readonly disabled: boo
 
 const LINK_TARGET_LABELS: Readonly<Record<BrowserLinkTarget, string>> = {
   system: "Your default browser",
-  app: "L3",
+  app: "Onyx",
 };
 
 function BrowserLinkTargetSetting({ disabled }: { readonly disabled: boolean }) {
@@ -794,11 +794,11 @@ export function PullRequestLinksOpenInAppSetting() {
   return (
     <SettingsRow
       {...searchableSetting("pull-request-links-open-in-app")}
-      description="Clicking a pull request link opens it in L3. Turn off to open pull request links like any other link, on your git host."
+      description="Clicking a pull request link opens it in Onyx. Turn off to open pull request links like any other link, on your git host."
       resetAction={
         openInApp ? null : (
           <SettingResetButton
-            label="open pull requests in L3"
+            label="open pull requests in Onyx"
             onClick={() => updateSettings({ pullRequestLinksOpenInApp: true })}
           />
         )
@@ -809,7 +809,7 @@ export function PullRequestLinksOpenInAppSetting() {
           onCheckedChange={(checked) =>
             updateSettings({ pullRequestLinksOpenInApp: Boolean(checked) })
           }
-          aria-label="Open pull requests in L3"
+          aria-label="Open pull requests in Onyx"
         />
       }
     />

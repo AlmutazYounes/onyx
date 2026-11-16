@@ -20,6 +20,6 @@ export function hostFreezeNotice(
     description:
       loadAverage !== undefined && loadAverage > cpuCount
         ? `Its CPU is overloaded (load ${Math.round(loadAverage)} on ${cpuCount} cores).`
-        : `L3 on ${hostLabel} was too busy to answer.`,
+        : `Onyx on ${hostLabel} was too busy to answer.`,
   };
 }

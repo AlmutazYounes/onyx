@@ -1,0 +1,15 @@
+{
+  "source": "Multi-file change: a rename the agent has to find every use of, plus a small behavior change",
+  "prompt": "Rename getUserName to getDisplayName everywhere in this project, including the tests. A display name is the user's nickname when they have one, otherwise first and last name. Keep `npm test` passing.",
+  "criteria": [
+    {
+      "name": "no use of the old name is left",
+      "check": "! grep -rn getUserName src test"
+    },
+    {
+      "name": "existing and hidden tests pass",
+      "tests": "node --test --test-reporter=tap test/*.js check/*.js",
+      "weight": 3
+    }
+  ]
+}

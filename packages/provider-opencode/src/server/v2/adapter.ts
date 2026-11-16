@@ -43,6 +43,8 @@ import {
   type ProviderInstanceId,
   type RunId,
   type RuntimeRequestId,
+  L3_OPENCODE_PROVIDER_ID,
+  l3CanonicalModelId,
 } from "@t3tools/contracts";
 import type * as Cause from "effect/Cause";
 import * as DateTime from "effect/DateTime";
@@ -740,7 +742,12 @@ const modelRef = (
       : undefined;
   return Model.Ref.make({
     providerID: Provider.ID.make(parsed.providerID),
-    id: Model.ID.make(parsed.modelID),
+    // Threads from before Onyx renamed its local models still name them the old way.
+    id: Model.ID.make(
+      parsed.providerID === L3_OPENCODE_PROVIDER_ID
+        ? l3CanonicalModelId(parsed.modelID)
+        : parsed.modelID,
+    ),
     ...(variant === undefined ? {} : { variant: Model.VariantID.make(variant) }),
   });
 };

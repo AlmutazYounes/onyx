@@ -95,7 +95,7 @@ const sendJson = Effect.fn("TextGenerator.sendJson")(function* <S extends Schema
     Effect.mapError(
       (cause) =>
         new TextGeneratorRequestError({
-          detail: `${label} returned a reply L3 couldn't read.`,
+          detail: `${label} returned a reply Onyx couldn't read.`,
           cause,
         }),
     ),
@@ -152,7 +152,7 @@ const openAICompatible: TextGeneratorDriver = {
       HttpClientRequest.bodyJsonUnsafe({
         model,
         messages: [{ role: "user", content: prompt }],
-        // Local thinking models (L3's Ollama) spend seconds reasoning about a title otherwise.
+        // Local thinking models (Onyx's Ollama) spend seconds reasoning about a title otherwise.
         ...(isLoopbackUrl(connection.baseUrl) ? { reasoning_effort: "none" } : {}),
       }),
     );

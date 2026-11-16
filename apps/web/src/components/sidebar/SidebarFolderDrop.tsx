@@ -72,7 +72,7 @@ export function SidebarFolderDrop(props: { children: ReactNode }) {
         stackedThreadToast({
           type: "error",
           title: `Could not add "${folder.name}"`,
-          description: response?.message ?? "L3 could not read the folder's path.",
+          description: response?.message ?? "Onyx could not read the folder's path.",
         }),
       );
     }

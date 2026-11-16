@@ -83,9 +83,9 @@ export const startCommand = Command.make("start", { ...sharedServerCommandFlags 
 const { autoBootstrapProjectFromCwd: _, ...serveCommandFlags } = sharedServerCommandFlags;
 
 export const serveCommand = Command.make("serve", serveCommandFlags).pipe(
-  Command.withShortDescription("Run L3 in this terminal, with no browser."),
+  Command.withShortDescription("Run Onyx in this terminal, with no browser."),
   Command.withDescription(
-    "Run L3 in this terminal without opening a browser, and print pairing details. The background service runs this. To set up access from your other devices, run `t3 up`.",
+    "Run Onyx in this terminal without opening a browser, and print pairing details. The background service runs this. To set up access from your other devices, run `t3 up`.",
   ),
   Command.withHandler((flags) =>
     runServerCommand(

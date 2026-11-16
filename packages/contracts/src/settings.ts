@@ -1575,7 +1575,7 @@ export const ServerSettings = Schema.Struct({
   usageLimitSources: Schema.Record(UsageLimitSourceId, UsageLimitSourceConfig).pipe(
     Schema.withDecodingDefault(Effect.succeed({})),
   ),
-  /** L3 agent items switched on or off; see `l3AgentItemEnabled` for the defaults. */
+  /** Onyx agent items switched on or off; see `l3AgentItemEnabled` for the defaults. */
   l3AgentItems: Schema.Record(TrimmedNonEmptyString, Schema.Boolean).pipe(
     Schema.withDecodingDefault(Effect.succeed({})),
   ),
@@ -1584,7 +1584,7 @@ export const ServerSettings = Schema.Struct({
       Effect.succeed({
         [L3_TEXT_GENERATOR_ID]: {
           kind: "openaiCompatible" as const,
-          label: "L3 Local (Ollama)",
+          label: "Onyx Local (Ollama)",
           baseUrl: L3_OLLAMA_BASE_URL,
           apiKey: "",
           enabled: true,

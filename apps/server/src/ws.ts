@@ -242,6 +242,7 @@ import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
 import * as ProcessResourceMonitor from "./diagnostics/ProcessResourceMonitor.ts";
 import * as ResourceTelemetry from "./resourceTelemetry/ResourceTelemetry.ts";
 import * as HostResources from "./resourceTelemetry/HostResources.ts";
+import * as LocalModels from "./localModels/LocalModels.ts";
 import { readL3ModelContext } from "@t3tools/provider-opencode/server/L3ModelMeter";
 import * as AnalyticsService from "./telemetry/AnalyticsService.ts";
 import { commandFeatureUsage, featureUsage } from "./telemetry/FeatureUsage.ts";
@@ -1581,6 +1582,7 @@ export const layerWsRpc = (
       const processDiagnostics = yield* ProcessDiagnostics.ProcessDiagnostics;
       const triage = yield* TriageService.TriageService;
       const hostResources = yield* HostResources.HostResources;
+      const localModels = yield* LocalModels.LocalModels;
       const processResourceMonitor = yield* ProcessResourceMonitor.ProcessResourceMonitor;
       const resourceTelemetry = yield* ResourceTelemetry.ResourceTelemetry;
       const relayClient = yield* RelayClient.RelayClient;
@@ -2698,6 +2700,10 @@ export const layerWsRpc = (
         [WS_METHODS.serverGetHostResources]: (_input) => hostResources.read,
         [WS_METHODS.serverGetModelContext]: (input) =>
           Effect.sync(() => readL3ModelContext(input.threadId)),
+        [WS_METHODS.serverGetLocalModels]: (_input) => localModels.read,
+        [WS_METHODS.serverMeasureLocalModel]: (input) => localModels.measure(input.model),
+        [WS_METHODS.serverSetLocalModelLoaded]: (input) =>
+          localModels.setLoaded(input.model, input.loaded),
         [WS_METHODS.serverGetProcessResourceHistory]: (input) =>
           processResourceMonitor.readHistory(input),
         [WS_METHODS.serverGetResourceTelemetryHistory]: (input) =>
