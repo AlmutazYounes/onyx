@@ -1,10 +1,7 @@
 import { TimelinePendingApprovalRow } from "./TimelinePendingApprovalRow";
-import { WorkLogButton, WorkLogList, WorkLogRow } from "./WorkLog";
+import { VerbLabel, WorkLogButton, WorkLogList, WorkLogRow } from "./WorkLog";
 import type { WorktreeSetupSnapshot } from "@t3tools/contracts";
-import { type ToolActivityIcon } from "@t3tools/contracts";
 import {
-  liveThoughtLine,
-  liveThoughtTail,
   resolveViewedImageAsset,
   workEntriesViewedImagePaths,
 } from "@t3tools/client-runtime/work-log/presentation";
@@ -17,9 +14,8 @@ import { observeVisibleAnimation } from "../../lib/visibleAnimation";
 import { memo, use, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { workEntryDisplayIndicatesToolFailure } from "../../session-logic";
-import ChatMarkdown from "../ChatMarkdown";
 import { assetMediaActionsSource } from "./ChatMarkdownMedia";
-import { Minimize2Icon, XIcon } from "lucide-react";
+import { ChevronRightIcon, Minimize2Icon, XIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { getVirtualizedScrollFadeClassName } from "../ui/scroll-area";
 import {
@@ -43,12 +39,7 @@ import {
   type TimelineRow,
 } from "./timelineRowContext";
 import { TimelineRowTimestamp, ActivityShimmerOverlay } from "./TimelineRowParts";
-import {
-  failedToolIconClassName,
-  toolIconAcceptsTint,
-  type WorkEntryIconName,
-  ToolActivityIconView,
-} from "./TimelineToolActivityIcon";
+import { failedToolIconClassName } from "./TimelineToolActivityIcon";
 import {
   useThreadReadTarget,
   threadReadLabel,
@@ -56,13 +47,7 @@ import {
   ReasoningTraceContent,
   SimpleWorkEntryRow,
 } from "./TimelineWorkEntryRow";
-import {
-  THINKING_PREVIEW_PLUGINS,
-  THOUGHT_PREVIEW_PLUGINS,
-  THOUGHT_PREVIEW_SOURCE_MAX_LENGTH,
-  toolGroupSummaryIconName,
-  workEntryIconName,
-} from "./TimelineWorkEntryRow.logic";
+import { reasoningRowLabel } from "./TimelineWorkEntryRow.logic";
 import { formatWorkingTimerNow } from "./TimelineWorkGroupRows.logic";
 
 export const WorkGroupSection = memo(function WorkGroupSection({
@@ -440,7 +425,6 @@ export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind:
   const activity = (
     <LiveActivityRow
       label={providerStartingLabel ?? row.label ?? modelStatus ?? liveAnswerPreview ?? "Thinking"}
-      iconName="brain"
       active={live}
       shimmer={live}
     />
@@ -461,15 +445,11 @@ export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind:
 
 function LiveActivityRow({
   label,
-  iconName,
-  toolIcon,
   failed = false,
   active = false,
   shimmer = false,
 }: {
   label: ReactNode;
-  iconName?: WorkEntryIconName;
-  toolIcon?: ToolActivityIcon | undefined;
   failed?: boolean;
   active?: boolean;
   shimmer?: boolean;
@@ -483,15 +463,13 @@ function LiveActivityRow({
     >
       <LiveActivityContent
         label={label}
-        iconName={iconName}
-        toolIcon={toolIcon}
         failed={failed}
         announceFailure={failed}
         active={animated && !shimmer}
       />
       {showShimmer ? (
         <ActivityShimmerOverlay>
-          <LiveActivityContent label={label} iconName={iconName} toolIcon={toolIcon} highlighted />
+          <LiveActivityContent label={label} highlighted />
         </ActivityShimmerOverlay>
       ) : null}
     </div>
@@ -500,49 +478,20 @@ function LiveActivityRow({
 
 function LiveActivityContent({
   label,
-  iconName,
-  toolIcon,
   failed = false,
   announceFailure = false,
   active = false,
   highlighted = false,
 }: {
   label: ReactNode;
-  iconName: WorkEntryIconName | undefined;
-  toolIcon?: ToolActivityIcon | undefined;
   failed?: boolean;
   announceFailure?: boolean;
   active?: boolean;
   highlighted?: boolean;
 }) {
-  const showTrailingFailureMark =
-    failed && iconName !== undefined && !toolIconAcceptsTint(toolIcon);
-
+  // Steps read as text, as in Cursor: the verb bright, the rest muted, a mark only on failure.
   return (
     <WorkLogRow
-      icon={
-        iconName ? (
-          <span
-            className={cn(
-              "flex size-4 items-center justify-center",
-              failed
-                ? failedToolIconClassName
-                : highlighted
-                  ? "text-foreground"
-                  : "text-icon-muted",
-            )}
-            role={announceFailure ? "img" : undefined}
-            aria-label={announceFailure ? "Tool call failed" : undefined}
-          >
-            <ToolActivityIconView
-              icon={toolIcon}
-              fallbackName={iconName}
-              className="block size-4 shrink-0 stroke-2"
-              muted={!highlighted}
-            />
-          </span>
-        ) : null
-      }
       label={
         <span
           className={cn(
@@ -551,12 +500,17 @@ function LiveActivityContent({
             active && "live-tool-shine",
           )}
         >
-          {label}
+          {typeof label === "string" && !highlighted ? <VerbLabel text={label} /> : label}
         </span>
       }
       trailing={
-        showTrailingFailureMark ? (
-          <XIcon aria-hidden className={cn("size-3 shrink-0", failedToolIconClassName)} />
+        failed ? (
+          <XIcon
+            role={announceFailure ? "img" : undefined}
+            aria-label={announceFailure ? "Tool call failed" : undefined}
+            aria-hidden={announceFailure ? undefined : true}
+            className={cn("size-3 shrink-0", failedToolIconClassName)}
+          />
         ) : null
       }
     />
@@ -580,72 +534,31 @@ export function LiveWorkEntryTimelineRow({
   if (pendingApproval) return <TimelinePendingApprovalRow approval={pendingApproval} />;
 
   const failed = workEntryDisplayIndicatesToolFailure(row.entry);
-  // While the model thinks, show its newest words so the row keeps moving.
-  const thoughtLine =
-    row.thought && !row.expanded
-      ? row.active
-        ? liveThoughtTail(row.thought.detail ?? "")
-        : liveThoughtLine((row.thought.detail ?? "").slice(0, THOUGHT_PREVIEW_SOURCE_MAX_LENGTH))
-      : "";
-  const thoughtIsStatus = thoughtLine !== "" && row.entry === row.thought;
+  const thinking = row.thought !== undefined && row.entry === row.thought;
+  // While the model thinks, its words stream under the row, as in Cursor.
+  const thoughtText = thinking && !row.expanded ? (row.thought?.detail ?? "").trim() : "";
 
   return (
     <button
       type="button"
       className={cn(
         "group/live-work flex w-full max-w-full cursor-pointer rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70",
-        thoughtLine ? "flex-col items-start" : "min-h-6 items-center",
+        thoughtText ? "flex-col items-start" : "min-h-6 items-center",
       )}
-      aria-label={
-        failed
-          ? `${thoughtLine ? `${thoughtLine} ` : ""}${threadLabel?.text ?? label}, tool call failed`
-          : undefined
-      }
+      aria-label={failed ? `${threadLabel?.text ?? label}, tool call failed` : undefined}
       aria-expanded={row.expanded}
       onClick={() => ctx.onToggleWorkGroup(row.groupId, row.id)}
     >
-      {thoughtLine ? (
-        <WorkLogRow
-          icon={
-            <span className="flex size-4 items-center justify-center text-icon-muted">
-              <ToolActivityIconView
-                icon={undefined}
-                fallbackName="brain"
-                className="block size-4 shrink-0 stroke-2"
-                muted
-              />
-            </span>
-          }
-          label={
-            <span className="line-clamp-4">
-              <ChatMarkdown
-                inline
-                text={thoughtLine}
-                cwd={ctx.markdownCwd}
-                parseRawHtml={false}
-                extraRemarkPlugins={THOUGHT_PREVIEW_PLUGINS}
-              />
-            </span>
-          }
-          wrapLabel
-        />
-      ) : null}
       <LiveActivityRow
         label={
-          thoughtIsStatus ? (
+          thinking ? (
             row.active ? (
               (modelStatus ?? "Thinking")
             ) : (
-              "Thought"
+              reasoningRowLabel(row.entry)
             )
           ) : row.entry.itemType === "reasoning" ? (
-            <ChatMarkdown
-              inline
-              text={(row.entry.detail ?? label).slice(0, THOUGHT_PREVIEW_SOURCE_MAX_LENGTH)}
-              cwd={ctx.markdownCwd}
-              parseRawHtml={false}
-              extraRemarkPlugins={row.active ? THINKING_PREVIEW_PLUGINS : THOUGHT_PREVIEW_PLUGINS}
-            />
+            reasoningRowLabel(row.entry)
           ) : threadLabel ? (
             <ThreadReadLabel
               label={threadLabel}
@@ -656,14 +569,35 @@ export function LiveWorkEntryTimelineRow({
             label
           )
         }
-        iconName={workEntryIconName(row.entry)}
-        toolIcon={row.entry.toolIcon ?? row.entry.toolSource?.icon}
         failed={failed}
         active={row.active}
       />
+      {thoughtText ? <StreamingThought text={thoughtText} /> : null}
     </button>
   );
 }
+
+// The newest lines of a thought, pinned to the bottom like a terminal. Plain text, so each
+// streamed token is a cheap text update rather than a markdown re-render.
+const STREAMING_THOUGHT_CHARS = 1_200;
+function StreamingThought({ text }: { text: string }) {
+  const tail =
+    text.length > STREAMING_THOUGHT_CHARS ? `…${text.slice(-STREAMING_THOUGHT_CHARS)}` : text;
+  return (
+    <div className="flex max-h-28 w-full flex-col-reverse overflow-hidden pb-1 [mask-image:linear-gradient(to_bottom,transparent,black_1.5rem)]">
+      <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground">
+        {plainThoughtText(tail)}
+      </p>
+    </div>
+  );
+}
+
+// Markdown markers read as noise in a live preview; the finished thought renders them properly.
+const plainThoughtText = (text: string) =>
+  text
+    .replace(/\*\*|__|`/g, "")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\n{3,}/g, "\n\n");
 
 export function WorkGroupToggleTimelineRow({
   row,
@@ -674,8 +608,6 @@ export function WorkGroupToggleTimelineRow({
   return (
     <WorkGroupHeader
       label={row.summary}
-      iconName={row.toolSurface ?? toolGroupSummaryIconName(row.summaryKind)}
-      toolIcon={row.toolIcon}
       failed={row.hasFailure}
       expanded={row.expanded}
       createdAt={row.createdAt}
@@ -687,8 +619,6 @@ export function WorkGroupToggleTimelineRow({
 
 function WorkGroupHeader(props: {
   label: string;
-  iconName: WorkEntryIconName;
-  toolIcon?: ToolActivityIcon | undefined;
   failed?: boolean | undefined;
   expanded: boolean;
   createdAt: string;
@@ -700,15 +630,20 @@ function WorkGroupHeader(props: {
       aria-label={props.failed ? `${props.label}, tool call failed` : props.label}
       aria-expanded={props.expanded}
       onClick={props.onToggle}
-      icon={
-        <ToolActivityIconView
-          icon={props.toolIcon}
-          fallbackName={props.iconName}
-          className="size-4 shrink-0 stroke-2 text-icon-muted"
-          muted
-        />
+      label={
+        <span className="flex min-w-0 items-center gap-1">
+          <span className="truncate">
+            <VerbLabel text={props.label} />
+          </span>
+          <ChevronRightIcon
+            aria-hidden
+            className={cn(
+              "size-3 shrink-0 text-icon-muted opacity-70 transition-transform duration-200",
+              props.expanded && "rotate-90",
+            )}
+          />
+        </span>
       }
-      label={<span className="block truncate">{props.label}</span>}
       trailing={
         <TimelineRowTimestamp createdAt={props.createdAt} timestampFormat={props.timestampFormat} />
       }

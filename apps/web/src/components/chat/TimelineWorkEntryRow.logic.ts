@@ -1,15 +1,16 @@
-import type { PluggableList } from "unified";
 import type { Root, RootContent } from "mdast";
 import {
   resolveWorkEntryToolPresentation,
   toolGroupAction,
 } from "@t3tools/client-runtime/work-log/presentation";
+import { formatDuration } from "@t3tools/shared/orchestrationTiming";
 import { isJavaScriptReplTool } from "@t3tools/shared/toolActivity";
+import * as DateTime from "effect/DateTime";
 import { formatWorkspaceRelativePath } from "../../filePathDisplay";
 import { type TimelineWorkEntry, type TimelineRow } from "./timelineRowContext";
 import { type WorkEntryIconName } from "./TimelineToolActivityIcon";
 
-export function toolGroupSummaryIconName(
+function toolGroupSummaryIconName(
   kind: Extract<TimelineRow, { kind: "work-toggle" }>["summaryKind"],
 ): WorkEntryIconName {
   switch (kind) {
@@ -198,10 +199,6 @@ export function workEntryIconName(workEntry: TimelineWorkEntry): WorkEntryIconNa
   return workToneIcon(workEntry.tone).iconName;
 }
 
-// Look past the visible label so long destinations and inline delimiters can close.
-// This is bounded lookahead, not document-wide Markdown parity: a closing delimiter
-// or reference definition beyond this prefix remains unresolved by the parser.
-export const THOUGHT_PREVIEW_SOURCE_MAX_LENGTH = 8_192;
 export const THOUGHT_PREVIEW_MAX_LENGTH = 2_048;
 
 /** Compact reasoning keeps formulas while flattening other Markdown into label text. */
@@ -265,5 +262,17 @@ export function remarkThoughtPreview(fallback: string) {
   };
 }
 
-export const THOUGHT_PREVIEW_PLUGINS: PluggableList = [[remarkThoughtPreview, "Thought"]];
-export const THINKING_PREVIEW_PLUGINS: PluggableList = [[remarkThoughtPreview, "Thinking"]];
+/** A reasoning step's row: "Thinking" while it runs, then how long it took, as in "Thought 9s". */
+export function reasoningRowLabel(
+  entry: Pick<TimelineWorkEntry, "createdAt" | "toolLifecycleStatus" | "projectedItem">,
+): string {
+  if (entry.toolLifecycleStatus === "inProgress") return "Thinking";
+  const item = entry.projectedItem?.item;
+  if (!item?.completedAt) return "Thought";
+  const start = item.startedAt
+    ? DateTime.toEpochMillis(item.startedAt)
+    : Date.parse(entry.createdAt);
+  const elapsed = DateTime.toEpochMillis(item.completedAt) - start;
+  if (!Number.isFinite(elapsed) || elapsed < 0) return "Thought";
+  return `Thought ${formatDuration(Math.max(1, Math.round(elapsed / 1_000)) * 1_000)}`;
+}

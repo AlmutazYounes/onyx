@@ -154,6 +154,8 @@ interface FilePreviewPanelProps {
   availableEditors: ReadonlyArray<EditorId>;
   openInShortcutEnabled: boolean;
   revealLine: number | null;
+  /** The last line of a revealed range; every line from revealLine to here is highlighted. */
+  revealEndLine?: number | null;
   revealRequestId: number;
   onOpenFile: (relativePath: string) => void;
   onNavigateFolder: (relativePath: string, folderTrail: string, keepSource: boolean) => void;
@@ -479,19 +481,29 @@ function clampFileLine(contents: string, requestedLine: number): number {
   return Math.min(Math.max(1, requestedLine), lineCount);
 }
 
-function updateFileLinkReveal(fileContainer: HTMLElement, line: number | null): void {
+const MAX_REVEALED_LINES = 500;
+
+function updateFileLinkReveal(
+  fileContainer: HTMLElement,
+  line: number | null,
+  endLine: number | null = line,
+): void {
   const root = fileContainer.shadowRoot ?? fileContainer;
   for (const element of root.querySelectorAll<HTMLElement>(`[${FILE_LINK_REVEAL_ATTRIBUTE}]`)) {
     element.removeAttribute(FILE_LINK_REVEAL_ATTRIBUTE);
   }
   if (line === null) return;
 
-  root
-    .querySelector<HTMLElement>(`[data-line="${line}"]`)
-    ?.setAttribute(FILE_LINK_REVEAL_ATTRIBUTE, "");
-  root
-    .querySelector<HTMLElement>(`[data-column-number="${line}"]`)
-    ?.setAttribute(FILE_LINK_REVEAL_ATTRIBUTE, "");
+  // Only rendered lines can carry the mark; the virtualized view re-applies it as it renders more.
+  const last = Math.min(endLine ?? line, line + MAX_REVEALED_LINES - 1);
+  for (let current = line; current <= last; current++) {
+    root
+      .querySelector<HTMLElement>(`[data-line="${current}"]`)
+      ?.setAttribute(FILE_LINK_REVEAL_ATTRIBUTE, "");
+    root
+      .querySelector<HTMLElement>(`[data-column-number="${current}"]`)
+      ?.setAttribute(FILE_LINK_REVEAL_ATTRIBUTE, "");
+  }
 }
 
 const REVEAL_MAX_ATTEMPTS = 30;
@@ -510,6 +522,7 @@ function useFileLineReveal(
   relativePath: string | null,
   revealLine: number | null,
   revealRequestId: number,
+  revealEndLine: number | null = null,
 ): FilePostRender {
   const [revealStatesByPath] = useState(() => new Map<string, FileRevealState>());
 
@@ -541,7 +554,11 @@ function useFileLineReveal(
     const contents = instance.file?.contents;
     const targetLine =
       revealLine === null || contents === undefined ? null : clampFileLine(contents, revealLine);
-    updateFileLinkReveal(fileContainer, targetLine);
+    const endLine =
+      targetLine === null || revealEndLine === null || contents === undefined
+        ? targetLine
+        : Math.max(targetLine, clampFileLine(contents, revealEndLine));
+    updateFileLinkReveal(fileContainer, targetLine, endLine);
 
     if (!(instance instanceof VirtualizedFile)) return;
 
@@ -1126,6 +1143,7 @@ export default function FilePreviewPanel({
   availableEditors,
   openInShortcutEnabled,
   revealLine,
+  revealEndLine = null,
   revealRequestId,
   onOpenFile,
   onNavigateFolder,
@@ -1347,7 +1365,12 @@ export default function FilePreviewPanel({
       : relativePath && attachment === undefined
         ? resolvePathLinkTarget(relativePath, cwd)
         : null;
-  const onFilePostRender = useFileLineReveal(relativePath, revealLine, revealRequestId);
+  const onFilePostRender = useFileLineReveal(
+    relativePath,
+    revealLine,
+    revealRequestId,
+    revealEndLine,
+  );
   // Mounting the file read under the workspace mutation id refetches it after each mutation.
   useAtomMount(
     canReadFiles &&

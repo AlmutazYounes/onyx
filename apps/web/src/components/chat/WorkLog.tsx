@@ -168,3 +168,15 @@ export function WorkLogDetails({
     </div>
   );
 }
+
+/** Cursor-style row text: the verb ("Read", "Thought") in full color, what it acted on muted. */
+export function VerbLabel({ text }: { text: string }) {
+  const space = text.indexOf(" ");
+  if (space <= 0) return <span className="text-foreground/90">{text}</span>;
+  return (
+    <>
+      <span className="text-foreground/90">{text.slice(0, space)}</span>
+      <span className="text-muted-foreground">{text.slice(space)}</span>
+    </>
+  );
+}

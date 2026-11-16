@@ -36,6 +36,7 @@ import {
   resolveAssistantMessageCopyState,
   type MessagesTimelineRow,
   workEntryDisplayLabel,
+  workEntryReadTarget,
 } from "./MessagesTimeline.logic";
 import { workEntryIconName } from "./TimelineWorkEntryRow.logic";
 
@@ -5156,5 +5157,35 @@ describe("isTimelineMinimapTurnVisible", () => {
     expect(isTimelineMinimapTurnVisible(500, undefined, 200, 210)).toBe(false);
     expect(isTimelineMinimapTurnVisible(10, 500, 500, 510)).toBe(false);
     expect(isTimelineMinimapTurnVisible(10, 500, null, null)).toBe(false);
+  });
+});
+
+describe("workEntryReadTarget", () => {
+  const read = (label: string, input: Record<string, unknown>) =>
+    ({
+      id: "r",
+      createdAt: "2026-11-16T00:00:00.000Z",
+      label,
+      tone: "tool",
+      requestKind: "file-read",
+      toolData: { input },
+    }) as const;
+
+  it("opens the lines a ranged read returned, inside the workspace", () => {
+    expect(
+      workEntryReadTarget(
+        read("Read styles.css L280-659", { path: "/repo/web/styles.css", offset: 280 }),
+        "/repo",
+      ),
+    ).toEqual({ path: "web/styles.css", startLine: 280, endLine: 659 });
+    expect(
+      workEntryReadTarget(read("Read a.ts", { path: "/repo/a.ts", offset: 10, limit: 5 }), "/repo"),
+    ).toEqual({ path: "a.ts", startLine: 10, endLine: 14 });
+  });
+
+  it("opens a whole-file read without a highlight", () => {
+    expect(
+      workEntryReadTarget(read("Read CONTEXT.md L1-84", { path: "/repo/CONTEXT.md" }), "/repo"),
+    ).toEqual({ path: "CONTEXT.md", startLine: null, endLine: null });
   });
 });

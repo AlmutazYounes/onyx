@@ -1,5 +1,9 @@
 import { TimelinePendingApprovalRow } from "./TimelinePendingApprovalRow";
-import { WorkLogDetails, WorkLogRow } from "./WorkLog";
+import { VerbLabel, WorkLogDetails, WorkLogRow } from "./WorkLog";
+import { editInlineDiff } from "./inlineDiff.logic";
+import { useRightPanelStore } from "../../rightPanelStore";
+import { useTurnItemDetail } from "../../state/queries";
+import { InlineDiffView } from "./InlineDiffView";
 import {
   getQuestionAnswerPreview,
   getQuestionAnswerText,
@@ -20,6 +24,7 @@ import {
   workEntryViewedImagePath,
 } from "@t3tools/client-runtime/work-log/presentation";
 import {
+  turnItemDetailRevision,
   turnItemHasDetail,
   turnItemNeedsDetailFetch,
 } from "@t3tools/client-runtime/work-log/item-detail";
@@ -44,6 +49,7 @@ import {
   threadReadTargetTitle,
   workEntryDisplayLabel,
   workEntryReadOutput,
+  workEntryReadTarget,
 } from "./MessagesTimeline.logic";
 import { cn } from "~/lib/utils";
 import { formatUpcomingTimestamp } from "../../timestampFormat";
@@ -57,19 +63,13 @@ import {
   type TimelineWorkEntry,
 } from "./timelineRowContext";
 import { MESSAGE_HEADING_LEVEL, TimelineRowTimestamp } from "./TimelineRowParts";
-import {
-  failedToolIconClassName,
-  toolIconAcceptsTint,
-  ToolActivityIconView,
-} from "./TimelineToolActivityIcon";
+import { failedToolIconClassName, ToolActivityIconView } from "./TimelineToolActivityIcon";
 import {
   workToneIcon,
   workEntryRawCommand,
   buildToolCallExpandedBody,
   workEntryIconName,
-  THINKING_PREVIEW_PLUGINS,
-  THOUGHT_PREVIEW_PLUGINS,
-  THOUGHT_PREVIEW_SOURCE_MAX_LENGTH,
+  reasoningRowLabel,
 } from "./TimelineWorkEntryRow.logic";
 
 export function useThreadReadTarget(entry: TimelineWorkEntry, environmentId: EnvironmentId) {
@@ -222,8 +222,34 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       ? notificationChildThreadId(workEntry.projectedItem.item.source)
       : undefined;
   const groupView = use(WorkGroupViewCtx);
+  // The wire leaves an edit's patch out to stay small; the row asks for it, as the inspector does.
+  const editProjection =
+    workEntry.projectedItem?.item.type === "file_change" &&
+    workEntry.projectedItem.item.status !== "failed"
+      ? workEntry.projectedItem
+      : null;
+  const editDetail = useTurnItemDetail(
+    editProjection
+      ? {
+          environmentId: ctx.activeThreadEnvironmentId,
+          threadId: editProjection.sourceThreadId,
+          itemId: editProjection.sourceItemId,
+          revision: turnItemDetailRevision(editProjection.item),
+        }
+      : null,
+    ctx.turnItemSource?.detail,
+  );
+  const fetchedEdit = editDetail.data?.item;
+  const changeItem =
+    fetchedEdit?.type === "file_change"
+      ? fetchedEdit
+      : editProjection?.item.type === "file_change"
+        ? editProjection.item
+        : null;
+  const editDiff = changeItem ? editInlineDiff(changeItem) : null;
+  // Edits open on their diff, as in Cursor; everything else starts folded.
   const [expanded, setExpanded] = useState(
-    () => groupView?.state.expandedEntries.has(workEntry.id) ?? false,
+    () => (groupView?.state.expandedEntries.has(workEntry.id) ?? false) || editProjection !== null,
   );
   const onInitialOutputReady = () => {
     if (groupView) groupView.onContentReady?.(workEntry.id);
@@ -390,7 +416,8 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
     workEntry.projectedItem !== undefined &&
     turnItemNeedsDetailFetch(workEntry.projectedItem.item);
   const canExpandProjectedItem =
-    plainOutput !== undefined
+    editDiff !== null ||
+    (plainOutput !== undefined
       ? Boolean(plainOutput || viewedImage || workEntry.questionAnswer || plainOutputFetches)
       : workEntry.projectedItem === undefined
         ? canExpand
@@ -400,7 +427,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
               viewedImage ||
               workEntry.questionAnswer ||
               turnItemHasDetail(workEntry.projectedItem.item),
-            );
+            ));
   const iconWrapperClass = cn(
     "flex size-4 items-center justify-center",
     showWarningIndicator
@@ -427,21 +454,49 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
   const accessibleDisplayText = showFailedIndicator
     ? `${accessiblePreview}, tool call failed`
     : accessiblePreview;
-  const rowToggleProps = canExpandProjectedItem
+  // A read opens its file with the lines it read highlighted, as in Cursor; a failed one expands.
+  const readTarget =
+    threadRef && !showFailedIndicator ? workEntryReadTarget(workEntry, workspaceRoot) : null;
+  const openRead =
+    readTarget && threadRef
+      ? () =>
+          useRightPanelStore
+            .getState()
+            .openFile(
+              threadRef,
+              readTarget.path,
+              readTarget.startLine ?? undefined,
+              readTarget.endLine ?? undefined,
+            )
+      : null;
+  const rowToggleProps = openRead
     ? {
         role: "button" as const,
         tabIndex: 0 as const,
-        "aria-label": accessibleDisplayText,
-        "aria-expanded": expanded,
-        onClick: toggleExpanded,
+        "aria-label": `Open ${readTarget?.path ?? "file"}`,
+        onClick: openRead,
         onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {
           if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault();
-            toggleExpanded();
+            openRead();
           }
         },
       }
-    : {};
+    : canExpandProjectedItem
+      ? {
+          role: "button" as const,
+          tabIndex: 0 as const,
+          "aria-label": accessibleDisplayText,
+          "aria-expanded": expanded,
+          onClick: toggleExpanded,
+          onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {
+            if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+              e.preventDefault();
+              toggleExpanded();
+            }
+          },
+        }
+      : {};
 
   return (
     <WorkLogRow
@@ -449,51 +504,60 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       data-v2-item-type={workEntry.projectedItem?.item.type}
       data-v2-item-visibility={workEntry.projectedItem?.visibility}
       {...rowToggleProps}
+      // Ordinary steps read as text, as in Cursor; only warnings and errors keep an icon.
       icon={
-        <span
-          className={iconWrapperClass}
-          role={showFailedIndicator ? "img" : undefined}
-          aria-label={showFailedIndicator ? "Tool call failed" : undefined}
-        >
-          <ToolActivityIconView
-            icon={entryToolIcon}
-            fallbackName={entryIconName}
-            className="block size-4 shrink-0 stroke-2"
-            muted
-          />
-        </span>
+        showWarningIndicator || showDestructiveRowStyle ? (
+          <span
+            className={iconWrapperClass}
+            role={showFailedIndicator ? "img" : undefined}
+            aria-label={showFailedIndicator ? "Tool call failed" : undefined}
+          >
+            <ToolActivityIconView
+              icon={entryToolIcon}
+              fallbackName={entryIconName}
+              className="block size-4 shrink-0 stroke-2"
+              muted
+            />
+          </span>
+        ) : undefined
       }
       label={
         <div className="min-w-0 flex-1 overflow-hidden">
           <p className="flex min-w-0 w-full items-baseline gap-1.5 text-sm leading-relaxed">
-            <span
-              className={cn(answerPreview ? "min-w-0" : "min-w-0 flex-1", "truncate", headingClass)}
-            >
-              {isReasoning && !expanded ? (
-                <ChatMarkdown
-                  inline
-                  text={(workEntry.detail ?? previewText).slice(
-                    0,
-                    THOUGHT_PREVIEW_SOURCE_MAX_LENGTH,
-                  )}
-                  cwd={ctx.markdownCwd}
-                  parseRawHtml={false}
-                  extraRemarkPlugins={
-                    workEntry.toolLifecycleStatus === "inProgress"
-                      ? THINKING_PREVIEW_PLUGINS
-                      : THOUGHT_PREVIEW_PLUGINS
-                  }
-                />
+            <span className={cn("min-w-0 truncate", headingClass)}>
+              {isReasoning ? (
+                <VerbLabel text={reasoningRowLabel(workEntry)} />
               ) : threadLabel ? (
                 <ThreadReadLabel
                   label={threadLabel}
                   environmentId={ctx.activeThreadEnvironmentId}
                   linked
                 />
+              ) : workLogEntryIsToolLike(workEntry) &&
+                !showWarningIndicator &&
+                !showDestructiveRowStyle ? (
+                <VerbLabel text={previewText} />
               ) : (
                 previewText
               )}
             </span>
+            {editDiff ? (
+              <span className="shrink-0 tabular-nums">
+                <span className="text-diff-addition-foreground">+{editDiff.additions}</span>{" "}
+                <span className="text-diff-deletion-foreground">-{editDiff.deletions}</span>
+              </span>
+            ) : null}
+            {canExpandProjectedItem && !answerPreview && !openRead ? (
+              <ChevronRightIcon
+                aria-hidden
+                className={cn(
+                  "size-3 shrink-0 self-center text-icon-muted transition-[transform,opacity] duration-200",
+                  expanded && "rotate-90",
+                  // Thinking always shows it can open; tool rows show it on hover, as in Cursor.
+                  !isReasoning && !expanded && "opacity-0 group-hover/timeline-row:opacity-70",
+                )}
+              />
+            ) : null}
             {answerPreview ? (
               <span
                 className={cn(
@@ -539,20 +603,8 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
               Open subagent
             </InlineButton>
           ) : null}
-          {showFailedIndicator &&
-          !showDestructiveRowStyle &&
-          !toolIconAcceptsTint(entryToolIcon) ? (
+          {showFailedIndicator && !showDestructiveRowStyle ? (
             <XIcon aria-hidden className={cn("size-3 shrink-0", failedToolIconClassName)} />
-          ) : null}
-          {canExpandProjectedItem ? (
-            <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden>
-              <ChevronRightIcon
-                className={cn(
-                  "size-3 shrink-0 text-icon-muted opacity-70 transition-transform duration-200",
-                  expanded && "rotate-90",
-                )}
-              />
-            </span>
           ) : null}
           <TimelineRowTimestamp createdAt={workEntry.createdAt} timestampFormat={timestampFormat} />
         </>
@@ -575,8 +627,10 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
         <QuestionAnswerHistory answer={workEntry.questionAnswer} />
       ) : null}
       {expanded && isReasoning ? <ReasoningTraceContent entries={[workEntry]} /> : null}
+      {expanded && editDiff ? <InlineDiffView diff={editDiff} /> : null}
       {expanded &&
       !isReasoning &&
+      !editDiff &&
       !workEntry.questionAnswer &&
       canExpandProjectedItem &&
       (expandedBody ||

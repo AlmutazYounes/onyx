@@ -29,10 +29,6 @@ import { TimelineRowCtx } from "./timelineRowContext";
 
 export const failedToolIconClassName = "text-tool-error-icon/40";
 
-export function toolIconAcceptsTint(toolIcon: ToolActivityIcon | undefined): boolean {
-  return toolIcon === undefined;
-}
-
 export type WorkEntryIconName =
   | "bot"
   | "brain"

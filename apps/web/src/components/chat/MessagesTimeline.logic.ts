@@ -136,6 +136,66 @@ function workEntryReadPaths(entry: WorkLogEntry, workspaceRoot: string | undefin
   );
 }
 
+// The file panel opens workspace files by their path from the workspace root.
+function workspaceFilePath(path: string, workspaceRoot: string | undefined) {
+  const normalized = path.replaceAll("\\", "/");
+  if (!workspaceRoot) return normalized;
+  const root = workspaceRoot.replaceAll("\\", "/").replace(/\/+$/, "");
+  return normalized.startsWith(`${root}/`) ? normalized.slice(root.length + 1) : normalized;
+}
+
+export interface WorkEntryReadTarget {
+  /** Workspace-relative when the file is inside the workspace, else as the tool gave it. */
+  readonly path: string;
+  readonly startLine: number | null;
+  readonly endLine: number | null;
+}
+
+/**
+ * The file and lines a read row points at, so clicking it opens them highlighted, as in Cursor.
+ * A read from the top with no offset is the whole file and opens without a highlight.
+ */
+export function workEntryReadTarget(
+  entry: WorkLogEntry,
+  workspaceRoot: string | undefined,
+): WorkEntryReadTarget | null {
+  if (toolGroupAction(entry) !== "read" || entry.viewedImagePath) return null;
+  const [rawPath] = workEntryReadRawPaths(entry);
+  if (!rawPath) return null;
+  const path = workspaceFilePath(rawPath, workspaceRoot);
+  const titled = /\bL(\d+)-(\d+)\b/.exec(`${entry.toolTitle ?? ""} ${entry.label}`);
+  const structured = entry.structuredPayload;
+  const data = workEntryToolDataRecord(entry);
+  const nested = data?.input;
+  const input =
+    structured?.type === "dynamic_tool" &&
+    typeof structured.input === "object" &&
+    structured.input !== null
+      ? (structured.input as Record<string, unknown>)
+      : typeof nested === "object" && nested !== null
+        ? (nested as Record<string, unknown>)
+        : data;
+  const offset = typeof input?.offset === "number" ? input.offset : null;
+  const limit = typeof input?.limit === "number" ? input.limit : null;
+  const startLine = titled ? Number(titled[1]) : offset;
+  const endLine = titled
+    ? Number(titled[2])
+    : offset !== null && limit !== null
+      ? offset + limit - 1
+      : null;
+  if (startLine === null || (startLine <= 1 && offset === null)) {
+    return { path, startLine: null, endLine: null };
+  }
+  return { path, startLine, endLine };
+}
+
+// Rows name a file the way Cursor does, by its name; the full path is in the row's details.
+const pathFileName = (path: string) =>
+  path
+    .replace(/[\\/]+$/, "")
+    .split(/[\\/]/)
+    .at(-1) || path;
+
 export function workEntryDisplayLabel(entry: WorkLogEntry, workspaceRoot: string | undefined) {
   if (entry.itemType === "system_notice") return entry.label;
   if (entry.itemType === "reasoning" || entry.tone === "thinking") {
@@ -155,7 +215,10 @@ export function workEntryDisplayLabel(entry: WorkLogEntry, workspaceRoot: string
   }
   const readPaths = action === "read" ? workEntryReadPaths(entry, workspaceRoot) : [];
   if (action === "read" && readPaths[0]) {
-    return formatReadToolLabel(readPaths[0], readPaths.length - 1);
+    // Keep the lines the read returned, as Cursor shows them: "Read styles.css L280-659".
+    const range = /\bL\d+-\d+\b/.exec(`${entry.toolTitle ?? ""} ${entry.label}`)?.[0];
+    const label = formatReadToolLabel(pathFileName(readPaths[0]), readPaths.length - 1);
+    return range ? `${label} ${range}` : label;
   }
   const providerRetry =
     entry.projectedItem?.item.type === "error" && entry.projectedItem.item.retry !== undefined;
@@ -171,10 +234,10 @@ export function workEntryDisplayLabel(entry: WorkLogEntry, workspaceRoot: string
   }
   const [firstPath] = entry.changedFiles ?? [];
   if (firstPath) {
-    const path = formatWorkspaceRelativePath(firstPath, workspaceRoot);
+    const name = pathFileName(formatWorkspaceRelativePath(firstPath, workspaceRoot));
     return entry.changedFiles!.length === 1
-      ? path
-      : `${path} +${entry.changedFiles!.length - 1} more`;
+      ? `Edited ${name}`
+      : `Edited ${name} +${entry.changedFiles!.length - 1} more`;
   }
   if (action === "read" && !entry.viewedImagePath) {
     return "Read file";
